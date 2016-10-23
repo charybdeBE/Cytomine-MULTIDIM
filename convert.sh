@@ -3,17 +3,16 @@
 
 #Convertisseur de base pour fichier en images multispectrale usable par IIPimage
 #Pas parfait avec des arguments attention au slash (problemes avec espaces)
-#Order of file bug
 #arg 1 = future filename
 #arg 2 = input directory (optional)
 #arg 3 = output directory (optional too)
-#arg 4 = first number (seems to be useless as it seems to be mandatory to start by 0)
 
 
 inp=""
 outp=""
 f=0
 filename=""
+template=""
 
 if [ $# -lt 1]; then
 	echo "Too few arguments"
@@ -26,11 +25,8 @@ if [ $# -gt 1 ]; then
 	if [ $# -gt 2 ]; then
 		outp=$3
 		if [ $# -gt 3 ]; then
-			f=$4
-			if [ $# -gt 4 ]; then
-				echo "Incorrect number of parameters"
-				exit
-			fi
+			echo "Incorrect number of parameters"
+			exit
 		fi
 	fi
 fi
@@ -45,6 +41,8 @@ mkdir $rr
 
 for fil in $inp*.jpg; do
 	zer=""
+	f=$(echo ${fil/$inp/""} | grep "[0-9]+" -o -E | head -n1 | cut -d " " -f1) #get the number of the file (should be the first number encountered)
+	echo $f
 	if [ $f -lt 100 ]; then
 		if [ $f -lt 10 ]; then
 			zer="00"
@@ -55,6 +53,5 @@ for fil in $inp*.jpg; do
 
 	newfile=$rr"/"$filename"_pyr_"$zer""$f"_090.tif"
 	echo $fil " -> " $newfile
-	f=$(($f + 1))
-	vips tiffsave "$fil" "$newfile" --tile --pyramid --compression lzw --tile-width 256 --tile-height 256 --bigtiff
+	#vips tiffsave "$fil" "$newfile" --tile --pyramid --compression lzw --tile-width 256 --tile-height 256 --bigtiff
 done
