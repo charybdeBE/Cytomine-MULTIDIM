@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#TODO IL faut s'assurer qu'on aie un n°0
 
 #Convertisseur de base pour fichier en images multispectrale usable par IIPimage
 #Pas parfait avec des arguments attention au slash (problemes avec espaces)
@@ -14,7 +15,7 @@ f=0
 filename=""
 template=""
 
-if [ $# -lt 1]; then
+if [ $# -lt 1 ]; then
 	echo "Too few arguments"
 	exit
 else
@@ -53,5 +54,5 @@ for fil in $inp*.jpg; do
 
 	newfile=$rr"/"$filename"_pyr_"$zer""$f"_090.tif"
 	echo $fil " -> " $newfile
-	#vips tiffsave "$fil" "$newfile" --tile --pyramid --compression lzw --tile-width 256 --tile-height 256 --bigtiff
+	vips tiffsave "$fil" "$newfile" --tile --pyramid --compression lzw --tile-width 256 --tile-height 256 --bigtiff
 done
