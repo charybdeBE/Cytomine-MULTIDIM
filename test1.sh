@@ -7,7 +7,7 @@
 #
 #Default values $2 = 100 $3 = 100
 
-nr_pxl=100
+nr_pxl=1
 nr_test=100
 
 if [ $# -lt 1 ]; then
@@ -27,22 +27,27 @@ if [ $# -gt 1 ]; then
 	fi
 fi
 
-
-wid=1563 #x todo
-hei=1129 #y todo
+#nr of tile
+tile=$[(15653/256) * (11296 / 256)] 
+#wid and hei of a tile
+wid=256
+hei=256
 
 res=("Execution time(s)\n")
 
 for i in `seq 1 $nr_test`; do
 req=""
 	for j in `seq 1 $nr_pxl`; do
+		t=$RANDOM
+		let "t%=$tile"
 		x=$RANDOM
 		let "x%=$wid"
 		y=$RANDOM
 		let "y%=$hei"
-		req=$req"-L http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=0,0,"$x","$y" "
+		req=$req"-L http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=6,"$t","$x","$y" "
 	done
 	#start time measure
+	echo $req
 	start=$(date +%s.%N)
 	curl $req > /dev/null
 	end=$(date +%s.%N)

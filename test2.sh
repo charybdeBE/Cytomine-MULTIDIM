@@ -29,8 +29,12 @@ if [ $# -gt 1 ]; then
 	fi
 fi
 
-wid=1563 #x todo
-hei=1129 #y todo
+#nr of tile
+tile=$[(15653/256) * (11296 / 256)] 
+tile_per_line=$[11296/256]
+#wid and hei of a tile
+wid=256
+hei=256
 
 res=("Execution time(s)\n")
 let "nr_pxl-=1"
@@ -38,18 +42,30 @@ let "nr_pxl-=1"
 for i in `seq 1 $nr_test`; do
 	req=""
 	#select a pixel
+	t=$RANDOM
+	let "t%=$tile"
 	x=$RANDOM
 	let "x%=$wid"
 	y=$RANDOM
 	let "y%=$hei"
 	#build the requests for the square :
 	for j in `seq 0 $nr_pxl`; do
+		let "xx=$x+$j"
 		for k in `seq 0 $nr_pxl`; do
-			let "xx=$x+$j"
 			let "yy=$y+$k"
-			req=$req"-L http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=0,0,"$xx","$yy" "
+			tt=$t
+			if [ $xx -ge $wid]; then #square overlaping tiles
+				let "tt=$t+1"
+				let "xx%=$wid"
+			fi
+			if [ $xx -ge $hei]; then 
+				let "tt=$t+$tile_per_line"
+				let "yy%=$hei"
+			fi	
+			req=$req"-L http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=6,"$tt","$xx","$yy" "
 		done
 	done
+	echo $req
 	#start time measure
 	start=$(date +%s.%N)
 	curl $req > /dev/null
