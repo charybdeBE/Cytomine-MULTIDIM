@@ -9,6 +9,15 @@
 #the square is $3 x $3 pixel large
 #Default values $2 = 100 $3 = 10
 
+
+#Configuration
+tile=$[(15653/256) * (11296 / 256)] #nr of tile 
+tile_per_line=$[11296/256] #nr of tile in a line
+wid=256 #width of a tile
+hei=256 #heigth of a tile
+url=localhost-iip-base #url of the iip server
+
+#Default argument
 nr_pxl=10
 nr_test=100
 
@@ -29,17 +38,12 @@ if [ $# -gt 1 ]; then
 	fi
 fi
 
-#nr of tile
-tile=$[(15653/256) * (11296 / 256)] 
-tile_per_line=$[11296/256]
-#wid and hei of a tile
-wid=256
-hei=256
 
 res=("Execution time(s)\n")
 let "nr_pxl-=1"
 
 for i in `seq 1 $nr_test`; do
+	echo "Test nr ${i}"
 	req=""
 	#select a pixel
 	t=$RANDOM
@@ -54,18 +58,18 @@ for i in `seq 1 $nr_test`; do
 		for k in `seq 0 $nr_pxl`; do
 			let "yy=$y+$k"
 			tt=$t
-			if [ $xx -ge $wid]; then #square overlaping tiles
+			if [ $xx -ge $wid ]; then #square overlaping tiles
 				let "tt=$t+1"
 				let "xx%=$wid"
 			fi
-			if [ $xx -ge $hei]; then 
+			if [ $xx -ge $hei ]; then 
 				let "tt=$t+$tile_per_line"
 				let "yy%=$hei"
 			fi	
-			req=$req"-L http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=6,"$tt","$xx","$yy" "
+			req=$req"-L http://"$url"/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=6,"$tt","$xx","$yy" "
 		done
 	done
-	echo $req
+	#echo $req
 	#start time measure
 	start=$(date +%s.%N)
 	curl $req > /dev/null
@@ -74,6 +78,6 @@ for i in `seq 1 $nr_test`; do
 	res[$i]="$(echo "$end - $start" | bc)\n"
 done
 
-echo -e ${res[*]} > results_test2.txt
+echo -e ${res[*]} > results_test2_moo.txt
 	
 

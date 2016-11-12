@@ -5,8 +5,16 @@
 #Select $3 pixels randomly
 #Get the info associated with each wavelength
 #
-#Default values $2 = 100 $3 = 100
+#Default values $2 = 100 $3 = 1
 
+#Configuration
+tile=$[(15653/256) * (11296 / 256)] #nr of tile 
+tile_per_line=$[11296/256] #nr of tile in a line
+wid=256 #width of a tile
+hei=256 #heigth of a tile
+url=localhost-iip-base #url of the iip server
+
+#Default argument
 nr_pxl=1
 nr_test=100
 
@@ -27,16 +35,13 @@ if [ $# -gt 1 ]; then
 	fi
 fi
 
-#nr of tile
-tile=$[(15653/256) * (11296 / 256)] 
-#wid and hei of a tile
-wid=256
-hei=256
+
 
 res=("Execution time(s)\n")
 
 for i in `seq 1 $nr_test`; do
-req=""
+	echo "Test nr "$i
+	req=""
 	for j in `seq 1 $nr_pxl`; do
 		t=$RANDOM
 		let "t%=$tile"
@@ -44,10 +49,10 @@ req=""
 		let "x%=$wid"
 		y=$RANDOM
 		let "y%=$hei"
-		req=$req"-L http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=6,"$t","$x","$y" "
+		req=$req"-L http://"$url"/fcgi-bin/iipsrv.fcgi?FIF="$path"&SPECTRA=6,"$t","$x","$y" "
 	done
 	#start time measure
-	echo $req
+	#echo $req
 	start=$(date +%s.%N)
 	curl $req > /dev/null
 	end=$(date +%s.%N)
@@ -55,6 +60,6 @@ req=""
 	res[$i]="$(echo "$end - $start" | bc)\n"
 done
 
-echo -e ${res[*]} > results_test1.txt
+echo -e ${res[*]} > results_test1_moo.txt
 	
 
