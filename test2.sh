@@ -1,14 +1,18 @@
 #!bin/bash
 
-
-# $1 = path to the image
-#Test repeat $2 times : (measure the time of)
+#Test repeat x times : (measure the time of)
 #Select 1 pixel randomly
 #Get the info associated with each wavelength of each pixel for a square 
 #where the top left corner is the selected pixel
-#the square is $3 x $3 pixel large
-#Default values $2 = 100 $3 = 10
+#the square is y x y pixel large
+#Default values x = 100 y = 10
 
+#Options :
+# -p | --path define the path to the file
+# -u | --url define the url of the iip image server
+# -o | --output output file to write the result in
+# -n  the size of a square edge
+# -t the number of tests
 
 #Configuration
 tile=$[(15653/256) * (11296 / 256)] #nr of tile 
@@ -16,28 +20,42 @@ tile_per_line=$[11296/256] #nr of tile in a line
 wid=256 #width of a tile
 hei=256 #heigth of a tile
 url=localhost-iip-base #url of the iip server
+output=result_test2.txt
+path=""
 
 #Default argument
 nr_pxl=10
 nr_test=100
 
-if [ $# -lt 1 ]; then
-	echo "Too few arguments"
-	exit
-else
-	path=$1
-fi
-if [ $# -gt 1 ]; then
-	nr_test=$2
-	if [ $# -gt 2 ]; then
-		nr_pxl=$3
-		if [ $# -gt 3 ]; then 
-			echo "Too much arguments"
-			exit
-		fi
-	fi
-fi
-
+while [[ $# -gt 1 ]] ;do
+key="$1"
+case $key in
+	-p|--path)
+	path="$2"
+	shift 
+	;;
+	-u|--url)
+	url="$2"
+	shift
+	;;
+	-o|--output)
+	output="$2"
+	shift # past argument
+	;;
+	-n)
+	nr_pxl="$2"
+	shift
+	;;
+	-t)
+	nr_test="$2"
+	shift
+	;;
+	*)
+	    # unknown option
+	;;
+esac
+shift # past argument or value
+done
 
 res=("Execution time(s)\n")
 let "nr_pxl-=1"
@@ -78,6 +96,6 @@ for i in `seq 1 $nr_test`; do
 	res[$i]="$(echo "$end - $start" | bc)\n"
 done
 
-echo -e ${res[*]} > results_test2_moo.txt
+echo -e ${res[*]} > $output
 	
 
