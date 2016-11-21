@@ -128,7 +128,7 @@ def create_test = {
 
 
 
-2.upto(8, { core ->
+5.upto(8, { core ->
 
     //Tests for random access
     def tests = new ArrayList<Pxl>();
