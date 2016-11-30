@@ -29,7 +29,14 @@ def create_random_pixel = {
     new Pxl2(tt, xx, yy)
 }
 
-
+def create_square = { storage ->
+    def base = create_random_pixel.call()
+    0.upto(9, { x ->
+        0.upto(9, {y ->
+            storage << new Pxl2(base.getTile(), base.getX() + x, base.getY() + y)
+        })
+    })
+}
 
 
 
@@ -37,6 +44,7 @@ def create_random_pixel = {
 class Pxl2 {
     def path = "http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF=data/28/brug/" //TODO include it in the constructor
     int tile, x, y, res
+    def division;
 
     Pxl2(t, x, y) {
         if (x > 255) {
@@ -51,18 +59,38 @@ class Pxl2 {
         this.y = y
         this.tile = t
         this.res = 6
+        this.division = 8;
     }
 
     //Nb names for directories inside the path are : path/<X>_<cores>/link
     // X start by 1
-    def getInfo(int cores, def threadPool) {
+    def getSquareInfo(def threadPool, int size) {
         assert cores > 0
-        def sb = new StringBuilder();
+        assert size > 0
 
-        List<Future> futures = (1..cores).collect{num->
-            threadPool.submit({-> work(this, num, cores) } as Callable);
+        def arrRet = new ArrayList<ArrayList<Future> >()
+
+
+        def sb = new StringBuilder();
+        0.upto(size - 1, { x->
+            0.upto(size - 1, { y ->
+                def xx = this.x + x % 256
+                def yy = this.y + y % 256
+                def tt = this.tile
+                if(this.x + x > 256)
+                    tt++
+                if(this.y + y > 256)
+                    tt += (11296 / 256)
+                 arrRet << (1..division).collect{num->
+                    threadPool.submit({-> work(new Pxl2(tt, xx, yy), num, division) } as Callable);
+                }
+            })
+
+        })
+
+        arrRet.each { futures ->
+            futures.each{sb.append(it.get() + "\n")}
         }
-        futures.each{sb.append(it.get())}
 
         return sb.toString();
 
@@ -70,7 +98,8 @@ class Pxl2 {
 
     def work = { px, tid, cores ->
         def txt = px.path + "/" + tid + "_" + cores + "/link&SPECTRA=" + px.res + "," + px.tile + "," + px.x + "," + px.y
-//        println "Here is from ${tid} : ${txt}"
+       // println "Here is from ${tid} : ${txt}"
+
         def texte = new URL(txt).getText()
          if (tid != cores) {
              texte = texte.substring(0, texte.indexOf('</spectra>') - 1); //remove last line
@@ -79,15 +108,27 @@ class Pxl2 {
              texte = texte.substring(texte.indexOf('</point>') + 8) //Remove the first wavelentgh (always id 0)
          }
 
+
         return texte;
     }
 }
 
 
 
-def threadPool = Executors.newFixedThreadPool(4)
 def tst = new ArrayList<Pxl2>();
-(1..10).each {tst << create_random_pixel.call()} //PS : le .call() est obligatoire ici
-tst.each { px -> println px.getInfo(8, threadPool)}
+def values = [16,32,48,64,96]
+values.each { size ->
+    def threadPool = Executors.newFixedThreadPool(size)
+    def output = new File("result_"+size+"size_threadpool_1.txt");
+    output.text = "Execution time (ms)"
+    (1..100).each { create_square(tst) }
+    def i = 0
+    tst.each { px ->
+        def duration = benchmark{  px.getSquareInfo(threadPool, 10) }
+        println "Test Square Threadpool : ${i} with ${size} cores has taken ${duration} ms  "
+        output << duration  + "\n"
+        ++i
 
-threadPool.shutdown();
+    }
+    threadPool.shutdown();
+}
