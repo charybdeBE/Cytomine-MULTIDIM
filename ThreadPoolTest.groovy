@@ -65,7 +65,6 @@ class Pxl2 {
     //Nb names for directories inside the path are : path/<X>_<cores>/link
     // X start by 1
     def getSquareInfo(def threadPool, int size) {
-        assert cores > 0
         assert size > 0
 
         def arrRet = new ArrayList<ArrayList<Future> >()
@@ -88,8 +87,11 @@ class Pxl2 {
 
         })
 
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
         arrRet.each { futures ->
+            sb.append("\n<pixel>\n<x>XXX</x>\n<y>YYY</y>")
             futures.each{sb.append(it.get() + "\n")}
+            sb.append("</pixel>")
         }
 
         return sb.toString();
@@ -107,6 +109,9 @@ class Pxl2 {
          if (tid != 1) {
              texte = texte.substring(texte.indexOf('</point>') + 8) //Remove the first wavelentgh (always id 0)
          }
+      if(tid == 1){
+            texte = texte.substring(texte.indexOf('?>') + 2) // remove <? xml ...
+        }
 
 
         return texte;
@@ -116,16 +121,16 @@ class Pxl2 {
 
 
 def tst = new ArrayList<Pxl2>();
-def values = [16,32,48,64,96]
+def values = [16]
 values.each { size ->
     def threadPool = Executors.newFixedThreadPool(size)
     def output = new File("result_"+size+"size_threadpool_1.txt");
     output.text = "Execution time (ms)"
-    (1..100).each { create_square(tst) }
+    (1..1).each { tst << create_random_pixel.call() }
     def i = 0
     tst.each { px ->
-        def duration = benchmark{  px.getSquareInfo(threadPool, 10) }
-        println "Test Square Threadpool : ${i} with ${size} cores has taken ${duration} ms  "
+        def duration = benchmark{  output << px.getSquareInfo(threadPool, 10) }
+        println "Test nr ${i} Square Threadpool of size ${size} has taken ${duration} ms  "
         output << duration  + "\n"
         ++i
 
