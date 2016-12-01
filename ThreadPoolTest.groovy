@@ -9,6 +9,10 @@ import java.util.concurrent.Future
  * Created by laurent on 28.11.16.
  */
 
+def size_list = [16, 32, 48, 64, 96]
+def nr_square = 100
+
+
 println "Test 6 // with threadpool"
 
 def random = new Random()
@@ -121,15 +125,15 @@ class Pxl2 {
 
 
 def tst = new ArrayList<Pxl2>();
-def values = [16]
+def values = size_list
 values.each { size ->
     def threadPool = Executors.newFixedThreadPool(size)
     def output = new File("result_"+size+"size_threadpool_1.txt");
     output.text = "Execution time (ms)"
-    (1..1).each { tst << create_random_pixel.call() }
+    (1..nr_square).each { tst << create_random_pixel.call() }
     def i = 0
     tst.each { px ->
-        def duration = benchmark{  output << px.getSquareInfo(threadPool, 10) }
+        def duration = benchmark{  px.getSquareInfo(threadPool, 10) }
         println "Test nr ${i} Square Threadpool of size ${size} has taken ${duration} ms  "
         output << duration  + "\n"
         ++i
