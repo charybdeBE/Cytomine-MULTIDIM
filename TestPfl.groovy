@@ -75,9 +75,12 @@ class Pxl3 {
     def work = { px, x_end, y ->
         def txt = px.path + "/" + px.name + "&PFL=" + px.res + ":" + px.x + "," + y + "-" + x_end + "," + y
         // println "Here is from ${txt}"
-
-        def texte = new URL(txt).getText()
-
+        def texte = ""
+        try {
+            texte = new URL(txt).getText()
+        }catch(Exception e){
+            println "Exception in " + txt
+        }
 
         //return ""
         return texte;
