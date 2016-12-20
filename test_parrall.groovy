@@ -1,4 +1,4 @@
-println "Test 3 parralleslism"
+println "Test 3,4,5 parralleslism"
 def random = new Random()
 
 def benchmark = { closure ->
@@ -160,7 +160,7 @@ def create_test = {
             })
         })
     }
-/*    1.upto(100, create_square)
+   1.upto(100, create_square)
     i = 0
     def output2 = new File("result_"+core + "cores_square_1.txt")
     output2.text = "Execution time (ms)\n"
@@ -171,12 +171,12 @@ def create_test = {
         println "Test Square : ${i} with ${core} cores has taken ${duration} ms  "
         output2 << duration + "\n"
         ++i
-    }*/
+    }
 
     1.upto(100, { tests << create_test.call() })
     i = 0
     def output3 = new File("result_"+core+"cores_oncessquare_1.txt")
-    output3.text = "Execution time (ms)\n"
+    output3.text = "Execution time (ms/100px)\n"
     tests.each { p ->
         def duration = benchmark {
             p.getSquareInfo(core, 10)

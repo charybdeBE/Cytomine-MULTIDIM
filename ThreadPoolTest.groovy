@@ -124,9 +124,10 @@ class Pxl2 {
 
 
 
-def tst = new ArrayList<Pxl2>();
+
 def values = size_list
 values.each { size ->
+    def tst = new ArrayList<Pxl2>();
     def threadPool = Executors.newFixedThreadPool(size)
     def output = new File("result_"+size+"size_threadpool_1.txt");
     output.text = "Execution time (ms)"

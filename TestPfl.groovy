@@ -17,8 +17,8 @@ def size_list = [ 32 ]
 def nr_square = 100
 def local_path = "http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF=/data/28/brug/"
 def local_name = "brug"
-def size_x = 11296
-def size_y = 15653
+def size_y = 11296
+def size_x = 15653
 
 println "Test 7 // with threadpool"
 
