@@ -1,3 +1,0 @@
-Execution time (ms)
-17647
-16295
