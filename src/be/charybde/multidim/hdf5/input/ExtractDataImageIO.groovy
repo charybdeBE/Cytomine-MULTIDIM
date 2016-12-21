@@ -1,12 +1,10 @@
-package be.charybde.multidim.hdf5.input;
+package be.charybde.multidim.hdf5.input
 
-import ch.systemsx.cisd.base.mdarray.MDShortArray;
+import ch.systemsx.cisd.base.mdarray.MDShortArray
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.awt.image.Raster;
-import java.io.File;
-import java.io.IOException;
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+import java.awt.image.Raster
 
 /**
  * Created by laurent on 17.12.16.
@@ -16,14 +14,14 @@ public class ExtractDataImageIO extends ExtractData{
     private String directory;
     private int dim;
     private int actual_dim;
-    private String[] filenames;
+    def private filenames;
 
     private Raster ras;
 
-    public ExtractDataImageIO(String d, String[] filenames){
+    public ExtractDataImageIO(String d, def filenames){
         this.filenames = filenames;
         this.actual_dim = 0;
-        this.dim = filenames.length;
+        this.dim = filenames.size();
         directory =d;
         try {
             String filename = directory + "/"  + filenames[0];
@@ -45,7 +43,8 @@ public class ExtractDataImageIO extends ExtractData{
     }
 
     public int getImageDepth(){
-        return dim;
+        println this.dim
+        return this.dim;
     }
 
     //Inititialise l'array en extractant image 0
@@ -73,15 +72,16 @@ public class ExtractDataImageIO extends ExtractData{
 
     private void nextImage(){
         actual_dim++;
+        if(actual_dim >= dim)
+            return;
         try {
             String filename = directory + "/"  + filenames[actual_dim];
             BufferedImage bf = ImageIO.read(new File(filename));
             ras = bf.getData();
         } catch (IOException e) {
-            System.out.println("Not found");
+            println filenames[actual_dim] + " not found"
         }
-        catch(ArrayIndexOutOfBoundsException ee){
-        }
+
     }
 
     //Warning may be too hevay for heap
