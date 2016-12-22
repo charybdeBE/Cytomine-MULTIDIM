@@ -89,6 +89,14 @@ public class BuildFile {
             yy = startY
 
             for (def i = 0; i < memory; ++i) {
+                if (dd == 0) {
+                    to_write_names << "/r" + d + "/t" + x + "_" + y + "";
+                    to_write_array << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
+                } else {
+                    to_write_array[i] = ed.extract2DTile(xx, yy, dd, tile_width, tile_height, to_write_array[i])
+                }
+
+
                 yy += tile_height
                 y++
                 if (yy >= ed.getImageHeight()) {
@@ -103,12 +111,7 @@ public class BuildFile {
                     else
                         break
                 }
-                if (dd == 0) {
-                    to_write_names << "/r" + d + "/t" + x + "_" + y + "";
-                    to_write_array << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
-                } else {
-                    to_write_array[i] = ed.extract2DTile(xx, yy, dd, tile_width, tile_height, to_write_array[i])
-                }
+
             }
         }
 
