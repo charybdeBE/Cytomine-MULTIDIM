@@ -12,55 +12,119 @@ import ch.systemsx.cisd.hdf5.IHDF5Writer
 //NOTE for future me : a Build file can work easily in //, one juste need to have several extract data instances with different set of file for exemple
     // and we can write in HDF5 at several olace at once (not really but theroetically)
 //Note bis : x coordinate represent the heigth and y the width
-//TODO do not write on disk each time we extract a tile, wait for the ram to be full
 
 public class BuildFile {
     private String filename;
-    private int tile_width, tile_height, tile_depth;
-    private ExtractData ed;
+    private int tile_width, tile_height, tile_depth, memory;
+    private ExtractDataImageIO ed; //Todo change with abstract class to code properly
     private IHDF5Writer writer;
     private HDF5IntStorageFeatures ft;
+    def ArrayList<MDShortArray> to_write_array = []
+    def ArrayList<String> to_write_names = []
 
-    public BuildFile(String filename, int tile_width, int tile_height, int tile_depth, String root, def ex) {
+    //This is just to debug
+    def benchmark = { closure ->
+        def start = System.currentTimeMillis()
+        closure.call()
+        def now = System.currentTimeMillis()
+        now - start
+    }
+
+
+
+    public BuildFile(String filename, int tile_width, int tile_height, int tile_depth, String root, def ex, def allocation) {
         this.filename = filename;
         this.tile_width = tile_width;
         this.tile_height = tile_height;
-        this.tile_depth = tile_depth;
+        def dimension = ex.size()
+        if(dimension < tile_depth)
+            this.tile_depth = dimension
+        else
+            this.tile_depth = tile_depth;
+        this.memory = allocation / (this.tile_depth * tile_height * tile_width * 2) //Represent the nr of tile we store into memory before writing
+        println "Burst of " + memory + " tiles"
+
         this.ed = new ExtractDataImageIO(root, ex);
         this.writer = HDF5Factory.open(filename);
         this.ft = HDF5IntStorageFeatures.createDeflationUnsigned(HDF5IntStorageFeatures.MAX_DEFLATION_LEVEL);
     }
 
     public BuildFile(String filename, String root, def ex) {
-        this(filename, 256,256,256, root, ex);
+        this(filename, 256,256,256, root, ex, 100000000);
     }
 
 
     public void createFile(){
-        int nr_width = (ed.getImageWidth() / tile_width) + 1
-        int nr_height = (ed.getImageHeight() / tile_height) + 1
-        int nr_depth = (ed.getImageDepth() / tile_depth) + 1
-
         String meta_group = "/meta";
         int[] meta_info = [tile_width, tile_depth, tile_height];
         writer.int32().writeArray(meta_group, meta_info, ft);
 
-        println nr_width +"," + nr_height + "," + nr_depth
-        for(int d = 0; d < nr_depth; d++){
-            for(int x = 0; x < nr_width; x++){
-                for(int y = 0; y < nr_height; y++){
-                    long start =  System.currentTimeMillis();
-                    String group_name = "/r"+d+"/t"+x+"_"+y+"";
-                    MDShortArray actual_tile = ed.extractTile(x,y,d,tile_width,tile_height, tile_depth);
-                    writer.int16().writeMDArray(group_name,  actual_tile,ft);
-                    long stop =  System.currentTimeMillis() - start;
-                    println("Tile done : " + group_name + " in (ms) " + stop);
+        def ret  = [0,0,0]
 
-                }
-            }
+        while(ret[0] < ed.getImageWidth() || ret[2] < ed.getImageDepth()){
+            def time = benchmark {ret = extractBurst(ret[0], ret[1], 0 ) }
+            def time2 = benchmark {                writeIntoDisk() }
+
+            println("Time : reading : " + time  + "(ms) + writing : " + time2 + " (ms) " + ret[0] + " " + ret[1]  + " " + ret[2] )
+
         }
 
+        writer.close()
+    }
 
+
+    //Return an array with the next coordinate to do
+    private int[] extractBurst(int startX, int startY, int startD){
+        def xx, yy, x,y,d,dd
+        d = (int) (startD / tile_depth)
+        int limit = startD + tile_depth
+        if(limit > ed.getImageDepth())
+            limit = ed.getImageDepth()
+
+        for ( dd = startD; dd < limit; ++dd) {
+            x = (int) (startX / tile_width)
+            y = (int) (startY / tile_height)
+            xx = startX
+            yy = startY
+
+            for (def i = 0; i < memory; ++i) {
+                yy += tile_height
+                y++
+                if (yy >= ed.getImageHeight()) {
+                    yy = 0
+                    y = 0
+                    x++
+                    if (xx != ed.getImageWidth()){
+                        xx += tile_width
+                        if(xx > ed.getImageWidth())
+                            xx = ed.getImageWidth()
+                    }
+                    else
+                        break
+                }
+                if (dd == 0) {
+                    to_write_names << "/r" + d + "/t" + x + "_" + y + "";
+                    to_write_array << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
+                } else {
+                    to_write_array[i] = ed.extract2DTile(xx, yy, dd, tile_width, tile_height, to_write_array[i])
+                }
+            }
+            ed.getImage(dd)
+        }
+
+        return [xx, yy, dd]
+
+    }
+
+
+    private void writeIntoDisk(){
+        if(to_write_array.size() <= 0 )
+            return;
+        0.upto(to_write_array.size() - 1,{ i ->
+                writer.int16().writeMDArray(to_write_names[i], to_write_array[i], ft)
+        })
+        to_write_names = []
+        to_write_array = []
     }
 
 
