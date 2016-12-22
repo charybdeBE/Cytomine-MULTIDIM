@@ -9,24 +9,14 @@ import ch.systemsx.cisd.hdf5.IHDF5Reader;
  */
 public class HDF5Pixel {
     private int x,y,dim;
-    private String path;
     private Boolean extract; //This flag means that the data is in the ram
-    private ArrayList<Short> data;
-
-
-    //This constructor is use for reading
-    public HDF5Pixel(int x, int y, int dim, String path) {
-        this(x,y,dim);
-        this.extract = false;
-        this.data = new ArrayList<>();
-        this.path = path;
-    }
-
+    def private data
     //Base constructor
     public HDF5Pixel(int x, int y, int dim){
         this.x = x;
         this.y = y;
         this.dim = dim;
+        this.data = []
     }
 
 
@@ -37,40 +27,35 @@ public class HDF5Pixel {
         return null;
     }
 
-    public List<Short> getValues(IHDF5Reader reader){
+    public short[] getValues(IHDF5Reader reader){
         if(extract)
             return data;
 
         String meta_group = "/meta";
         int[] meta = reader.int32().readArray(meta_group);
+        int tile_w = meta[0]
+        int tile_h = meta[1]
+        int tile_d = meta[2]
 
-        int[] blockDimensions = [1,1,meta[2]]; //We want to get the complete infosof 1 pxl
-        long[] blockNumber = [x,y,0];
-        ArrayList<Short> result = new ArrayList<>();
-        int nr_depth_tiles = dim / meta[2];
-        int x_tile = x / meta[0];
-        int y_tile = y / meta[0];
+        int[] blockDimensions = [1,1,tile_d]; //We want to get the complete infosof 1 pxl
+        long[] blockNumber = [x % tile_w ,y %tile_h,0];
+        int nr_depth_tiles = dim / tile_d;
+        int x_tile = x / tile_w;
+        int y_tile = y / tile_h;
 
         for(int i=0; i<nr_depth_tiles; ++i) {
-            String actual_path = "r" + i + "/t" + x_tile + "_" + y_tile;
+            String actual_path = "/r" + i + "/t" + x_tile + "_" + (y_tile +1);
             MDShortArray arr = reader.int16().readMDArrayBlock(actual_path, blockDimensions, blockNumber);
-            short[] flat =  arr.getAsFlatArray();
-            //TODO store the result in the list
+            arr.getAsFlatArray().each { val ->
+                data << val
+            }
         }
 
         this.extract = true;
-        this.data = result;
 
-        return result;
+        return data;
     }
 
-    public void addDimData(int index, short value){
-        this.data.add(index, value);
-    }
-
-    public void addDimData(short value){
-        this.data.add(value);
-    }
 
     public int getX() {
         return x;

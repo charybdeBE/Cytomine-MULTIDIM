@@ -16,7 +16,7 @@ import ch.systemsx.cisd.hdf5.IHDF5Writer
 public class BuildFile {
     private String filename;
     private int tile_width, tile_height, tile_depth, memory;
-    private ExtractDataImageIO ed; //Todo change with abstract class to code properly
+    private ExtractData ed;
     private IHDF5Writer writer;
     private HDF5IntStorageFeatures ft;
     def ArrayList<MDShortArray> to_write_array = []
@@ -56,7 +56,7 @@ public class BuildFile {
 
     public void createFile(){
         String meta_group = "/meta";
-        int[] meta_info = [tile_width, tile_depth, tile_height];
+        int[] meta_info = [tile_width, tile_height, tile_depth];
         writer.int32().writeArray(meta_group, meta_info, ft);
 
         def ret  = [0,0,0]
@@ -82,6 +82,7 @@ public class BuildFile {
             limit = ed.getImageDepth()
 
         for ( dd = startD; dd < limit; ++dd) {
+            ed.getImage(dd)
             x = (int) (startX / tile_width)
             y = (int) (startY / tile_height)
             xx = startX
@@ -109,7 +110,6 @@ public class BuildFile {
                     to_write_array[i] = ed.extract2DTile(xx, yy, dd, tile_width, tile_height, to_write_array[i])
                 }
             }
-            ed.getImage(dd)
         }
 
         return [xx, yy, dd]
