@@ -44,7 +44,8 @@ public class HDF5Pixel {
         int y_tile = y / tile_h;
 
         for(int i=0; i<nr_depth_tiles; ++i) {
-            String actual_path = "/r" + i + "/t" + x_tile + "_" + (y_tile +1);
+            String actual_path = "/r" + i + "/t" + x_tile + "_" + y_tile;
+            println(actual_path)
             MDShortArray arr = reader.int16().readMDArrayBlock(actual_path, blockDimensions, blockNumber);
             arr.getAsFlatArray().each { val ->
                 data << val

@@ -61,11 +61,15 @@ public class BuildFile {
 
         def ret  = [0,0,0]
 
+        def i = 0
+        int nrB = ((ed.getImageWidth() / tile_width) * (ed.getImageHeight() / tile_height) * (ed.getImageDepth() / tile_depth))  / memory
         while(ret[0] < ed.getImageWidth() || ret[2] < ed.getImageDepth()){
             def time = benchmark {ret = extractBurst(ret[0], ret[1], 0 ) }
             def time2 = benchmark {                writeIntoDisk() }
-
-            println("Time : reading : " + time  + "(ms) + writing : " + time2 + " (ms) " + ret[0] + " " + ret[1]  + " " + ret[2] )
+            ++i
+            time /= 1000
+            time2 /= 1000
+            println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " + ret[0] + " " + ret[1]  + " " + ret[2] )
 
         }
 
