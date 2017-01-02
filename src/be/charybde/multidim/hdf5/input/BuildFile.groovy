@@ -145,7 +145,7 @@ public class BuildFile {
         writer.int32().writeArray(meta_group, meta_info, ft);
 
         def ret  = [0,0,0]
-        def threadPool = Executors.newFixedThreadPool(cores)
+        def threadPool = Executors.newFixedThreadPool(cores * 2)
         def names = new ArrayList<ArrayList<String>>()
         def vals = new ArrayList<ArrayList<MDShortArray>>()
         (1..cores).each {
@@ -156,59 +156,75 @@ public class BuildFile {
 
         int nrB = ((ed.getImageWidth() / tile_width) * (ed.getImageHeight() / tile_height) * (ed.getImageDepth() / tile_depth))  / memory
 
-        int xx, yy, x,y, xxx, yyy
+        int x, y,i
         x = 0
         y = 0
-        for(int i=0; i < nrB; i += cores){
+        for( i=0; i < nrB; i += cores){
             def arrRet = new ArrayList<Future>()
 
-            def time = benchmark {
-                for (int d = 0; d < tile_depth; d++) {
-                    xx = x
-                    yy = y
-                    ed.getImage(d)
-                    (1..4).each { k ->
-                            arrRet << threadPool.submit({ -> work(xx, yy, d, memory, names[k-1], vals[k-1]) } as Callable)
-                            def d1 = memory * tile_width * tile_height
-                            yy = (yy + d1) % ed.getImageHeight()
-                            xx += (d1 / ed.getImageWidth())
-
-                    }
-                    arrRet.each { it.get() }
-                    xxx = xx
-                    yyy = yy
-                }
-            }
-            def time2 = benchmark {
-                to_write_array = vals.flatten();
-                to_write_names = names.flatten();
-                writeIntoDisk()
-                /*names = new ArrayList<ArrayList<String>>()
-                 vals = new ArrayList<ArrayList<MDShortArray>>()*/
-                (0..cores - 1).each {
-                    names[it] =  new ArrayList<String>()
-                    vals[it] =  new ArrayList<MDShortArray>()
-                }
-            }
-            time /= 1000
+            def res = extractBurstParr(cores, x, y, vals, names, arrRet, threadPool)
+            def time2 = writeParr(cores, vals, names)
+            def time = res[2] / 1000
             time2 /= 1000
             println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
-            x = xxx
-            y = yyy
+            x = res[0]
+            y = res[1]
+        }
+        if(i > nrB){//On est allez trop loin
+            int rest = nrB - (i - cores)
+            def arrRet = new ArrayList<Future>()
+            def res = extractBurstParr(rest, x, y, vals, names, arrRet, threadPool)
+            def time2 = writeParr(rest, vals, names)
+            def time = res[2] / 1000
+            time2 /= 1000
+            println("("+nrB+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
+
         }
 
 
         writer.close()
     }
 
+    public int extractBurstParr(int cores, int x, int y, def vals, def names, def arrRet, def tp){
+        def xx,yy,xxx,yyy
+        def time = benchmark {
+            for (int d = 0; d < tile_depth; d++) {
+                xx = x
+                yy = y
+                ed.getImage(d)
+                (1..cores).each { k ->
+                    arrRet << tp.submit({ -> work(xx, yy, d, memory, names[k-1], vals[k-1]) } as Callable)
+                    def d1 = memory * tile_width * tile_height
+                    yy = (yy + d1) % ed.getImageHeight()
+                    xx += (d1 / ed.getImageWidth())
+
+                }
+                arrRet.each { it.get() }
+                xxx = xx
+                yyy = yy
+            }
+        }
+        return [xxx, yyy, time]
+    }
+
+    public int writeParr(int cores, def vals, def names){
+        def time2 = benchmark {
+            to_write_array = vals.flatten();
+            to_write_names = names.flatten();
+            writeIntoDisk()
+            (0..cores - 1).each {
+                names[it] =  new ArrayList<String>()
+                vals[it] =  new ArrayList<MDShortArray>()
+            }
+        }
+        return time2
+    }
+
     def work = { int startX, int startY, int d, int nr, ArrayList<String> names, ArrayList<MDShortArray> arrs ->
         def x, y
         x = startX
         y = startY
-        def ret = []
-        ret = extract2DBurst(x,y, d, names, arrs)
-        x = ret[0]
-        y = ret[1]
+        def ret = extract2DBurst(x,y, d, names, arrs)
         return ret
     }
 

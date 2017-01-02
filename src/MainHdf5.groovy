@@ -34,21 +34,14 @@ pxl.each { pp ->
 reader.close()*/
 
 
-
-
+def script = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/listOfFile.sh"
 def fn = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/testNNew.h5"
 def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/testNold.h5"
-
 def dir = "/home/laurent/sample/1-6/"
-def files = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"]
 
-/*def t = benchmark {
-def worker = new BuildFile(fn, dir, files)
-
-worker.newMethod()}
-
-println "Time for new " + t*/
-
+def stringScript = "" + script + " " + dir
+def retScript = stringScript.execute().text
+def files = retScript.split(",")
 
 
 def tt = benchmark {
@@ -59,16 +52,4 @@ def tt = benchmark {
 tt /= 1000
 
 println "Time for // " + tt + "(s)"
-
-def ttt = benchmark {
-    def worker = new BuildFile(fn, 256,256,256, dir, files, 160);
-    worker.createFile()
-}
-ttt /= 1000
-
-println "Time for old " + ttt + "(s)"
-
-//t /= 1000
-
-//println "Old : " +tt + " New " + t
 
