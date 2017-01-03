@@ -73,7 +73,7 @@ public class ExtractDataImageIO extends ExtractData{
     }
 
     public MDShortArray extract2DTile(int startX, int startY, int dim, int wid, int hei, MDShortArray base){
-        int[] chapeau = new int[256*256]
+        int[] chapeau = new int[256*256] //TODO param
         if(startX + wid > getImageWidth())
             wid = getImageWidth() - startX - 1
         if(startY + hei > getImageHeight())

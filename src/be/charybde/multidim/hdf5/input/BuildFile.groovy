@@ -18,11 +18,13 @@ import java.util.concurrent.Future
 //Note bis : x coordinate represent the heigth and y the width
 
 public class BuildFile {
-    private String filename;
+    private String filename; //Without extention
+    private final String extention = ".h5"
     private int tile_width, tile_height, tile_depth, memory;
     private ExtractData ed;
     private IHDF5Writer writer;
     private HDF5IntStorageFeatures ft;
+    private Boolean stop = false
     def ArrayList<MDShortArray> to_write_array = []
     def ArrayList<String> to_write_names = []
 
@@ -41,20 +43,26 @@ public class BuildFile {
         this.tile_width = tile_width;
         this.tile_height = tile_height;
         def dimension = ex.size()
-        if(dimension < tile_depth)
+        def fn
+        if(dimension < tile_depth){
             this.tile_depth = dimension
-        else
+            fn = filename + extention
+        }
+        else  {
             this.tile_depth = tile_depth;
+            fn = filename + ".0" + extention
+        }
         this.memory = brustSize //Represent the nr of tile we store into memory before writing
 
         this.ed = new ExtractDataImageIO(root, ex);
-        this.writer = HDF5Factory.open(filename);
+
+        this.writer = HDF5Factory.open(fn);
         this.ft = HDF5IntStorageFeatures.createDeflationUnsigned(HDF5IntStorageFeatures.MAX_DEFLATION_LEVEL);
         println "My lfe is potato"
     }
 
     public BuildFile(String filename, String root, def ex) {
-        this(filename, 256,256,256, root, ex, 40);
+        this(filename, 256,256, 256, root, ex, 40);
     }
 
 
@@ -140,12 +148,8 @@ public class BuildFile {
 
 
     public void createParr(int cores){
-        String meta_group = "/meta";
-        int[] meta_info = [tile_width, tile_height, tile_depth];
-        writer.int32().writeArray(meta_group, meta_info, ft);
-
         def ret  = [0,0,0]
-        def threadPool = Executors.newFixedThreadPool(cores * 2)
+        def threadPool = Executors.newFixedThreadPool(cores)
         def names = new ArrayList<ArrayList<String>>()
         def vals = new ArrayList<ArrayList<MDShortArray>>()
         (1..cores).each {
@@ -154,41 +158,79 @@ public class BuildFile {
         }
 
 
-        int nrB = ((ed.getImageWidth() / tile_width) * (ed.getImageHeight() / tile_height) * (ed.getImageDepth() / tile_depth))  / memory
+        int nrB = ((ed.getImageWidth() / tile_width) * (ed.getImageHeight() / tile_height) )  / memory
+        int nrF = (int) (ed.getImageDepth() / tile_depth)
+       if(ed.getImageDepth() % tile_depth != 0)
+           nrF++
+        println nrF
 
-        int x, y,i
-        x = 0
-        y = 0
-        for( i=0; i < nrB; i += cores){
-            def arrRet = new ArrayList<Future>()
 
-            def res = extractBurstParr(cores, x, y, vals, names, arrRet, threadPool)
-            def time2 = writeParr(cores, vals, names)
-            def time = res[2] / 1000
-            time2 /= 1000
-            println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
-            x = res[0]
-            y = res[1]
+        int x, y,i, d
+        for(d = 0; d < nrF; ++d){
+            println "File " + d
+            String meta_group = "/meta";
+            int[] meta_info = [tile_width, tile_height, tile_depth];
+            writer.int32().writeArray(meta_group, meta_info, ft);
+            def startDim = d * tile_depth
+            x = 0
+            y = 0
+
+            for( i=0; i < nrB; i += cores){
+                def arrRet = new ArrayList<Future>()
+
+                def res = extractBurstParr(cores, x, y, startDim, names, vals, arrRet, threadPool)
+                def time2 = benchmark {
+                    to_write_array = vals.flatten();
+                    to_write_names = names.flatten();
+                    writeIntoDisk()
+                    (0..cores - 1).each {
+                        names[it] =  new ArrayList<String>()
+                        vals[it] =  new ArrayList<MDShortArray>()
+                    }
+                }
+                def time = res[2] / 1000
+                time2 /= 1000
+                println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
+                x = res[0]
+                y = res[1]
+            }
+            if(i > nrB){//On est allez trop loin
+                int rest = nrB - (i - cores)
+                def arrRet = new ArrayList<Future>()
+                def res = extractBurstParr(rest, x, y, startDim, names, vals, arrRet, threadPool)
+                def time2 = benchmark {
+                    to_write_array = vals.flatten();
+                    to_write_names = names.flatten();
+                    writeIntoDisk()
+                    (0..cores - 1).each {
+                        names[it] =  new ArrayList<String>()
+                        vals[it] =  new ArrayList<MDShortArray>()
+                    }
+                }
+                def time = res[2] / 1000
+                time2 /= 1000
+                println("("+nrB+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
+
+            }
+
+            writer.close()
+            if(d < nrF - 1)
+                this.writer = HDF5Factory.open(filename+"."+(d+1)+""+extention);
         }
-        if(i > nrB){//On est allez trop loin
-            int rest = nrB - (i - cores)
-            def arrRet = new ArrayList<Future>()
-            def res = extractBurstParr(rest, x, y, vals, names, arrRet, threadPool)
-            def time2 = writeParr(rest, vals, names)
-            def time = res[2] / 1000
-            time2 /= 1000
-            println("("+nrB+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
-
-        }
 
 
-        writer.close()
+
     }
 
-    public int extractBurstParr(int cores, int x, int y, def vals, def names, def arrRet, def tp){
-        def xx,yy,xxx,yyy
-        def time = benchmark {
-            for (int d = 0; d < tile_depth; d++) {
+    public int[] extractBurstParr(int cores, int x, int y, int startDim,  ArrayList<ArrayList<String>> names, ArrayList<ArrayList<MDShortArray>> vals, ArrayList<Future> arrRet, def tp){
+        int xx,yy,xxx,yyy
+        def limit = startDim + tile_depth
+        if(limit > ed.getImageDepth())
+            limit = ed.getImageDepth()
+
+        int time = benchmark {
+            for (int d = startDim; d < limit; d++) {
+               // println "d "+d+ " sD " + startDim + " limit " + limit
                 xx = x
                 yy = y
                 ed.getImage(d)
@@ -196,7 +238,7 @@ public class BuildFile {
                     arrRet << tp.submit({ -> work(xx, yy, d, memory, names[k-1], vals[k-1]) } as Callable)
                     def d1 = memory * tile_width * tile_height
                     yy = (yy + d1) % ed.getImageHeight()
-                    xx += (d1 / ed.getImageWidth())
+                    xx += (int) (d1 / ed.getImageWidth())
 
                 }
                 arrRet.each { it.get() }
@@ -207,18 +249,6 @@ public class BuildFile {
         return [xxx, yyy, time]
     }
 
-    public int writeParr(int cores, def vals, def names){
-        def time2 = benchmark {
-            to_write_array = vals.flatten();
-            to_write_names = names.flatten();
-            writeIntoDisk()
-            (0..cores - 1).each {
-                names[it] =  new ArrayList<String>()
-                vals[it] =  new ArrayList<MDShortArray>()
-            }
-        }
-        return time2
-    }
 
     def work = { int startX, int startY, int d, int nr, ArrayList<String> names, ArrayList<MDShortArray> arrs ->
         def x, y

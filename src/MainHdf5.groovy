@@ -35,13 +35,15 @@ reader.close()*/
 
 
 def script = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/listOfFile.sh"
-def fn = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/testNNew.h5"
-def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/testNold.h5"
+def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test64"
 def dir = "/home/laurent/sample/1-6/"
 
 def stringScript = "" + script + " " + dir
 def retScript = stringScript.execute().text
+retScript = retScript.replace("\n", "")
 def files = retScript.split(",")
+
+println "Number of files : " +files.size()
 
 
 def tt = benchmark {
@@ -52,4 +54,5 @@ def tt = benchmark {
 tt /= 1000
 
 println "Time for // " + tt + "(s)"
+
 
