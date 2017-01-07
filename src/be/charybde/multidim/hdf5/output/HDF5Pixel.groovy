@@ -27,15 +27,13 @@ public class HDF5Pixel {
         return null;
     }
 
-    public short[] getValues(IHDF5Reader reader){
+    protected void extractValues(HDF5PxlReader reader){
         if(extract)
             return data;
 
-        String meta_group = "/meta";
-        int[] meta = reader.int32().readArray(meta_group);
-        int tile_w = meta[0]
-        int tile_h = meta[1]
-        int tile_d = meta[2]
+        def tile_d = reader.getTileDepth()
+        def tile_w = reader.getTileWidth()
+        def tile_h = reader.getTileHeight()
 
         int[] blockDimensions = [1,1,tile_d]; //We want to get the complete infosof 1 pxl
         long[] blockNumber = [x % tile_w ,y %tile_h,0];
@@ -43,10 +41,12 @@ public class HDF5Pixel {
         int x_tile = x / tile_w;
         int y_tile = y / tile_h;
 
+
+        //Todo //
         for(int i=0; i<nr_depth_tiles; ++i) {
             String actual_path = "/r" + i + "/t" + x_tile + "_" + y_tile;
             println(actual_path)
-            MDShortArray arr = reader.int16().readMDArrayBlock(actual_path, blockDimensions, blockNumber);
+            MDShortArray arr = reader.getReader().int16().readMDArrayBlock(actual_path, blockDimensions, blockNumber);
             arr.getAsFlatArray().each { val ->
                 data << val
             }

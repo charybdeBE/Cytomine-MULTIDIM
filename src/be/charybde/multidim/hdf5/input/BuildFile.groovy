@@ -24,11 +24,12 @@ public class BuildFile {
     private ExtractData ed;
     private IHDF5Writer writer;
     private HDF5IntStorageFeatures ft;
-    private Boolean stop = false
     def ArrayList<MDShortArray> to_write_array = []
     def ArrayList<String> to_write_names = []
 
+
     //This is just to debug
+    def HashMap<String, Integer> already = new HashMap<>()
     def benchmark = { closure ->
         def start = System.currentTimeMillis()
         closure.call()
@@ -58,7 +59,6 @@ public class BuildFile {
 
         this.writer = HDF5Factory.open(fn);
         this.ft = HDF5IntStorageFeatures.createDeflationUnsigned(HDF5IntStorageFeatures.MAX_DEFLATION_LEVEL);
-        println "My lfe is potato"
     }
 
     public BuildFile(String filename, String root, def ex) {
@@ -147,9 +147,10 @@ public class BuildFile {
     }
 
 
-    public void createParr(int cores){
+    public void createParr(int coco){
         def ret  = [0,0,0]
-        def threadPool = Executors.newFixedThreadPool(cores)
+        def cores = coco  - 1
+        def threadPool = Executors.newFixedThreadPool(coco)
         def names = new ArrayList<ArrayList<String>>()
         def vals = new ArrayList<ArrayList<MDShortArray>>()
         (1..cores).each {
@@ -162,7 +163,6 @@ public class BuildFile {
         int nrF = (int) (ed.getImageDepth() / tile_depth)
        if(ed.getImageDepth() % tile_depth != 0)
            nrF++
-        println nrF
 
 
         int x, y,i, d
@@ -174,23 +174,27 @@ public class BuildFile {
             def startDim = d * tile_depth
             x = 0
             y = 0
-
+            def writeFuture = threadPool.submit( {} as Callable) //initialisation of a future
             for( i=0; i < nrB; i += cores){
                 def arrRet = new ArrayList<Future>()
 
+
                 def res = extractBurstParr(cores, x, y, startDim, names, vals, arrRet, threadPool)
                 def time2 = benchmark {
-                    to_write_array = vals.flatten();
-                    to_write_names = names.flatten();
-                    writeIntoDisk()
-                    (0..cores - 1).each {
-                        names[it] =  new ArrayList<String>()
-                        vals[it] =  new ArrayList<MDShortArray>()
-                    }
+                    writeFuture.get()
                 }
+                to_write_array = vals.flatten();
+                to_write_names = names.flatten();
+                (0..cores - 1).each {
+                    names[it] =  new ArrayList<String>()
+                    vals[it] =  new ArrayList<MDShortArray>()
+                }
+                writeFuture = threadPool.submit({-> writeIntoDisk() } as Callable)
+
                 def time = res[2] / 1000
                 time2 /= 1000
-                println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
+                println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing late : " + time2 + " (s) " )
+
                 x = res[0]
                 y = res[1]
             }
@@ -219,11 +223,11 @@ public class BuildFile {
         }
 
 
-
+        threadPool.shutdown()
     }
 
     public int[] extractBurstParr(int cores, int x, int y, int startDim,  ArrayList<ArrayList<String>> names, ArrayList<ArrayList<MDShortArray>> vals, ArrayList<Future> arrRet, def tp){
-        int xx,yy,xxx,yyy
+        int[] nextXy
         def limit = startDim + tile_depth
         if(limit > ed.getImageDepth())
             limit = ed.getImageDepth()
@@ -231,52 +235,62 @@ public class BuildFile {
         int time = benchmark {
             for (int d = startDim; d < limit; d++) {
                // println "d "+d+ " sD " + startDim + " limit " + limit
-                xx = x
-                yy = y
                 ed.getImage(d)
-                (1..cores).each { k ->
-                    arrRet << tp.submit({ -> work(xx, yy, d, memory, names[k-1], vals[k-1]) } as Callable)
-                    def d1 = memory * tile_width * tile_height
-                    yy = (yy + d1) % ed.getImageHeight()
-                    xx += (int) (d1 / ed.getImageWidth())
+                (0..cores - 1).each { k ->
+
+                    arrRet << tp.submit({ -> work(x, y, d,k, names[k], vals[k]) } as Callable)
 
                 }
                 arrRet.each { it.get() }
-                xxx = xx
-                yyy = yy
+                arrRet = new ArrayList<Future>()
             }
         }
-        return [xxx, yyy, time]
+        nextXy = advance1Dto2D(x, y, memory*tile_height*cores)
+        return [nextXy[0], nextXy[1], time]
     }
 
 
-    def work = { int startX, int startY, int d, int nr, ArrayList<String> names, ArrayList<MDShortArray> arrs ->
-        def x, y
-        x = startX
-        y = startY
-        def ret = extract2DBurst(x,y, d, names, arrs)
+    def work = { int startX, int startY, int startD,int k, ArrayList<String> names, ArrayList<MDShortArray> arrs ->
+        int inc = memory * tile_height * k
+        int[] xy = advance1Dto2D(startX, startY, inc)
+
+        def ret = extract2DBurst(xy[0],xy[1], startD, k, names, arrs)
         return ret
     }
 
-    public int[] extract2DBurst(int startX, int startY, int startD, ArrayList<String> names, ArrayList<MDShortArray> arrs){
-        def xx, yy, x,y,d
-        d = (int) (startD / tile_depth)
-        x = (int) (startX / tile_width)
-        y = (int) (startY / tile_height)
-        xx = startX
-        yy = startY
+    public int[] advance1Dto2D(int x, int y, int increase){
+        y = (y + increase)
+        while(y > ed.getImageHeight()){
+            int falseHei = ((int) ((ed.getImageHeight() / tile_height))) * tile_height
+            y = y - falseHei
+            if(y < 0)
+                y = 0
+
+            x += tile_width
+            if(x >= ed.getImageWidth())
+                x = ed.getImageWidth() - 1
+        }
+        return [x,y]
+    }
+
+    public int[] extract2DBurst(int startX, int startY, int startD, int k, ArrayList<String> names, ArrayList<MDShortArray> arrs){
+        int d = (int) (startD / tile_depth)
+        int x = (int) (startX / tile_width)
+        int y = (int) (startY / tile_height)
+        int xx = startX
+        int yy = startY
+      //  println "Kzk " + k + " X " + startX + " Y " + startY
+
         for (def i = 0; i < memory; ++i) {
-            if(names == null){
-                if(arrs == null)
-                    println "Error on " + startX + " " + startY
-                else
-                    println "Error in " + startX + " " + startY
-            }
             if (startD % tile_depth == 0) {
                 names << "/r" + d + "/t" + x + "_" + y + "";
+                if(already.containsKey(names[i]))
+                    println names[i] + " in " + already.get(names[i]) + " and " + k
+                else
+                    already.put(names[i], k)
                 arrs << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
             } else {
-                arrs[i] = ed.extract2DTile(xx, yy, startD, tile_width, tile_height, arrs[i])
+                arrs[i] = ed.extract2DTile(xx, yy, startD % tile_depth, tile_width, tile_height, arrs[i])
             }
 
 

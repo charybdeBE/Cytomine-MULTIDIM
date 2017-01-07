@@ -73,11 +73,14 @@ public class ExtractDataImageIO extends ExtractData{
     }
 
     public MDShortArray extract2DTile(int startX, int startY, int dim, int wid, int hei, MDShortArray base){
-        int[] chapeau = new int[256*256] //TODO param
-        if(startX + wid > getImageWidth())
-            wid = getImageWidth() - startX - 1
-        if(startY + hei > getImageHeight())
-            hei = getImageHeight() - startY - 1
+     //   println "Sx "  + startX + " Sy " + startY + " d " + dim  +" w " + wid + " hei " +hei
+        if(startX + wid >= getImageWidth()){
+            wid = getImageWidth() - startX
+        }
+        if(startY + hei >= getImageHeight()){
+            hei = getImageHeight() - startY
+        }
+        int[] chapeau = new int[256*256]
         int[] v=  ras.getSamples(startX,startY,wid, hei, 0, chapeau)
         int id = 0
         v.each { val->

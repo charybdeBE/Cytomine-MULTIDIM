@@ -35,7 +35,7 @@ reader.close()*/
 
 
 def script = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/listOfFile.sh"
-def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test64"
+def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test69"
 def dir = "/home/laurent/sample/1-6/"
 
 def stringScript = "" + script + " " + dir
