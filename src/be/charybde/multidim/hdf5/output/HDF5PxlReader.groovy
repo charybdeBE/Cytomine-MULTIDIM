@@ -43,11 +43,13 @@ class HDF5PxlReader {
     }
 
     HDF5Geometry extractSpectra(int x, int y, int wid, int hei){
-        //TODO rectangle
+        def rec = new HDF5Rectangle(x,y,wid,hei, dimensions)
+        extractSpectra(rec)
+        return rec
     }
 
     HDF5Geometry extractSpectra(int x, int y, int size){
-        //TODO square
+        return extractSpectra(x,y,size,size)
     }
 
     HDF5Geometry extractSpectra(HDF5Geometry pxl) {
