@@ -7,7 +7,7 @@ import ch.systemsx.cisd.hdf5.IHDF5Reader;
 /**
  * Created by laurent on 16.12.16.
  */
-public class HDF5Pixel {
+public class HDF5Pixel implements  HDF5Geometry {
     private int x,y,dim;
     private Boolean extract; //This flag means that the data is in the ram
     def private data
@@ -21,13 +21,13 @@ public class HDF5Pixel {
 
 
     //If we are sure that data is present we can use this. TODO make it throwing
-    public List<Short> getValues(){
+    def getValues(){
         if(extract)
             return data;
         return null;
     }
 
-    protected void extractValues(HDF5PxlReader reader){
+    public void extractValues(HDF5PxlReader reader){
         if(extract)
             return data;
 
@@ -35,7 +35,7 @@ public class HDF5Pixel {
         def tile_w = reader.getTileWidth()
         def tile_h = reader.getTileHeight()
 
-        int[] blockDimensions = [1,1,tile_d]; //We want to get the complete infosof 1 pxl
+        int[] blockDimensions = [1,1,tile_d]; //We want to get the complete info of 1 pxl
         long[] blockNumber = [x % tile_w ,y %tile_h,0];
         int nr_depth_tiles = dim / tile_d;
         int x_tile = x / tile_w;
@@ -64,5 +64,9 @@ public class HDF5Pixel {
 
     public int getY() {
         return y;
+    }
+
+    def getDim(){
+        return [x,y,dim]
     }
 }
