@@ -9,27 +9,16 @@ import ch.systemsx.cisd.hdf5.IHDF5Reader;
  */
 public class HDF5Pixel implements  HDF5Geometry {
     private int x,y,dim;
-    private Boolean extract; //This flag means that the data is in the ram
-    def private data
     //Base constructor
     public HDF5Pixel(int x, int y, int dim){
         this.x = x;
         this.y = y;
         this.dim = dim;
-        this.data = []
-    }
-
-
-    //If we are sure that data is present we can use this. TODO make it throwing
-    def getValues(){
-        if(extract)
-            return data;
-        return null;
     }
 
     public void extractValues(HDF5PxlReader reader){
-        if(extract)
-            return data;
+        if(isDataPresent())
+            return;
 
         def tile_d = reader.getTileDepth()
         def tile_w = reader.getTileWidth()
@@ -43,6 +32,7 @@ public class HDF5Pixel implements  HDF5Geometry {
 
 
         //Todo //
+        def data = []
         for(int i=0; i<nr_depth_tiles; ++i) {
             String actual_path = "/r" + i + "/t" + x_tile + "_" + y_tile;
             println(actual_path)
@@ -52,9 +42,8 @@ public class HDF5Pixel implements  HDF5Geometry {
             }
         }
 
-        this.extract = true;
+        setData(data)
 
-        return data;
     }
 
 

@@ -3,8 +3,26 @@ package be.charybde.multidim.hdf5.output
 /**
  * Created by laurent on 08.01.17.
  */
-interface HDF5Geometry {
-    def getValues()
-    def void extractValues(HDF5PxlReader p)
-    def getDim()
+trait HDF5Geometry {
+    private Boolean extract
+    def private data = []
+
+    def  getValues(){
+        if(extract)
+            return data
+        return null
+    }
+
+    public void setData(def data){
+        this.data = data
+        this.extract = true
+    }
+
+
+    public Boolean isDataPresent(){
+        return this.extract
+    }
+
+    def abstract void extractValues(HDF5PxlReader p)
+    def abstract getDim()
 }
