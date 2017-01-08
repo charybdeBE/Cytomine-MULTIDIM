@@ -1,7 +1,10 @@
 package be.charybde.multidim.hdf5.output;
 
 import ch.systemsx.cisd.base.mdarray.MDShortArray;
-import ch.systemsx.cisd.hdf5.IHDF5Reader;
+import ch.systemsx.cisd.hdf5.IHDF5Reader
+
+import java.util.concurrent.Callable
+import java.util.concurrent.Future;
 
 
 /**
@@ -31,15 +34,18 @@ public class HDF5Pixel implements  HDF5Geometry {
         int y_tile = y / tile_h;
 
 
-        //Todo //
         def data = []
-        for(int i=0; i<nr_depth_tiles; ++i) {
-            String actual_path = "/r" + i + "/t" + x_tile + "_" + y_tile;
-            println(actual_path)
-            MDShortArray arr = reader.getReader().int16().readMDArrayBlock(actual_path, blockDimensions, blockNumber);
-            arr.getAsFlatArray().each { val ->
-                data << val
-            }
+        ArrayList<Future> spectra =  []
+        (1..nr_depth_tiles).each { i ->
+            spectra << reader.getThreadPool().submit({ ->
+                String path = "/r" + i + "/t" + x_tile + "_" + y_tile
+                MDShortArray arr = reader.getReader(i).int16().readMDArrayBlock(path, blockDimensions, blockNumber);
+                arr.getAsFlatArray()
+            } as Callable)
+        }
+
+        spectra.each {
+            data + it.get()
         }
 
         setData(data)

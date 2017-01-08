@@ -2,6 +2,7 @@ package be.charybde.multidim.hdf5.output
 
 import ch.systemsx.cisd.hdf5.HDF5Factory
 import ch.systemsx.cisd.hdf5.IHDF5Reader
+import sun.nio.ch.ThreadPool
 
 import java.util.concurrent.Executors
 
@@ -11,9 +12,9 @@ import java.util.concurrent.Executors
 class HDF5PxlReader {
     private String name
     def private relatedFilenames
-    def private reader //could be an array ?
+    private ArrayList<IHDF5Reader> readers
     def private tile_width, tile_height, tile_depth
-    def private tp
+    private ThreadPool tp
     private int dimensions
 
     public HDF5PxlReader(String name) {
@@ -24,9 +25,12 @@ class HDF5PxlReader {
         retScript = retScript.replace("\n", "")
         relatedFilenames = retScript.split(",")
 
-        reader = new HDF5Factory().openForReading(relatedFilenames[0])
+        relatedFilenames.each {
+            readers << new HDF5Factory().openForReading(it)
+        }
+
         String meta_group = "/meta";
-        int[] meta = reader.int32().readArray(meta_group);
+        int[] meta = readers[0].int32().readArray(meta_group);
         tile_width = meta[0]
         tile_height = meta[1]
         tile_depth = meta[2]
@@ -57,8 +61,11 @@ class HDF5PxlReader {
         return  pxl
     }
 
-    IHDF5Reader getReader(){
-        return  reader
+    IHDF5Reader getReader(int i){
+        assert i >= 0
+        if(readers.size() <= i)
+            return null
+        return readers[i]
     }
 
     def getTileWidth() {
@@ -73,7 +80,7 @@ class HDF5PxlReader {
         return tile_depth
     }
 
-    def getThreadPool(){
+    public ThreadPool getThreadPool(){
         return tp
     }
 }
