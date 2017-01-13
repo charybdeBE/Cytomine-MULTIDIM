@@ -36,19 +36,20 @@ public class HDF5Pixel implements  HDF5Geometry {
 
         def data = []
         ArrayList<Future> spectra =  []
-        (1..nr_depth_tiles).each { i ->
+        (0..nr_depth_tiles - 1).each { i ->
             spectra << reader.getThreadPool().submit({ ->
                 String path = "/r" + i + "/t" + x_tile + "_" + y_tile
                 MDShortArray arr = reader.getReader(i).int16().readMDArrayBlock(path, blockDimensions, blockNumber);
-                arr.getAsFlatArray()
+                return  arr.getAsFlatArray()
             } as Callable)
         }
 
         spectra.each {
-            data + it.get()
+            data << it.get()
         }
 
-        setData(data)
+
+        setData(data.flatten())
 
     }
 

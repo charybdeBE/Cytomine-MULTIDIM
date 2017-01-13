@@ -36,7 +36,7 @@ public class ExtractDataImageIO extends ExtractData{
             BufferedImage bf = ImageIO.read(new File(filename));
             ras = bf.getData();
         } catch (IOException e) {
-            System.out.println("Not found");
+            System.out.println(filenames[0] + " Not found");
         }
     }
 

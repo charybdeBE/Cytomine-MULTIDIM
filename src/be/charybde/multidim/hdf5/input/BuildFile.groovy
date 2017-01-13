@@ -29,7 +29,7 @@ public class BuildFile {
 
 
     //This is just to debug
-    def HashMap<String, Integer> already = new HashMap<>()
+    //def HashMap<String, Integer> already = new HashMap<>()
     def benchmark = { closure ->
         def start = System.currentTimeMillis()
         closure.call()
@@ -62,7 +62,7 @@ public class BuildFile {
     }
 
     public BuildFile(String filename, String root, def ex) {
-        this(filename, 256,256, 256, root, ex, 40);
+        this(filename, 256,256, 256, root, ex, 5);
     }
 
 
@@ -284,10 +284,11 @@ public class BuildFile {
         for (def i = 0; i < memory; ++i) {
             if (startD % tile_depth == 0) {
                 names << "/r" + d + "/t" + x + "_" + y + "";
-                if(already.containsKey(names[i]))
+                /*if(already.containsKey(names[i]))
                     println names[i] + " in " + already.get(names[i]) + " and " + k
                 else
                     already.put(names[i], k)
+                */
                 arrs << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
             } else {
                 arrs[i] = ed.extract2DTile(xx, yy, startD % tile_depth, tile_width, tile_height, arrs[i])
