@@ -20,8 +20,11 @@ class HDF5Rectangle implements HDF5Geometry{
         this.hei = hei
     }
 
-
     @Override
+    def getDataFromCache(Object array) {
+        return null
+    }
+
     void extractValues(HDF5PxlReader reader) {
         if(isDataPresent())
             return;

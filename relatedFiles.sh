@@ -18,9 +18,9 @@ cd ${dirr}
 
 for fil in $(ls -1v ${nameAlone}*${ext}) ; do
 	if [ "${out}" == "" ]; then
-		out=${fil}
+		out="${dirr}/${fil}"
 	else
-		out="${out},${fil}"
+		out="${out},${dirr}/${fil}"
 	fi
 done
 

@@ -50,17 +50,24 @@ def randomPair = {
 }
 
 def reader = new HDF5PxlReader(fn2)
-def pxl = new ArrayList<HDF5Geometry>()
-def coo = []
+def pxl = []
+def coo = [[0,0],[10,10],[5,5],[500,500],[501,501]]
 def times = []
-
+/*
 0.upto(5,{
     def cord = randomPair.call()
     coo << cord
     times << benchmark{
         pxl << reader.extractSpectraPixel(cord)
     }
-})
+})*/
+
+coo.each {cord ->
+    times << benchmark{
+        pxl << reader.extractSpectraPixel(cord)
+    }
+}
+
 reader.close()
 
 def i = 0

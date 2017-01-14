@@ -23,6 +23,6 @@ trait HDF5Geometry {
         return this.extract
     }
 
-    def abstract void extractValues(HDF5PxlReader p)
+    def abstract getDataFromCache(def array)
     def abstract getDim()
 }

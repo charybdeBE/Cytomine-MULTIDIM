@@ -16,9 +16,10 @@ class HDF5PxlReader {
     private String name
     def private relatedFilenames
     private ArrayList<IHDF5Reader> readers
-    def private tile_width, tile_height, tile_depth
+    private int tile_width, tile_height, tile_depth
     def private tp
     private int dimensions
+    private HashMap cache
 
     public HDF5PxlReader(String name) {
         this.name = name
@@ -27,8 +28,8 @@ class HDF5PxlReader {
         def retScript = stringScript.execute().text
         readers = []
         retScript = retScript.replace("\n", "")
-//        relatedFilenames = retScript.split(",")
-        relatedFilenames = ["/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1650.0.h5", "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1650.1.h5"]
+        relatedFilenames = retScript.split(",")
+     //   relatedFilenames = ["/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1650.0.h5", "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1650.1.h5"]
         relatedFilenames.each {
             readers << new HDF5Factory().openForReading(it)
         }
@@ -40,7 +41,7 @@ class HDF5PxlReader {
         tile_depth = meta[2]
         dimensions = relatedFilenames.size() * tile_depth //Note this is only ok if we have one file per tile depth
         this.tp = Executors.newFixedThreadPool(8)
-
+        this.cache = new HashMap()
     }
 
 
@@ -49,9 +50,10 @@ class HDF5PxlReader {
     }
 
     HDF5Geometry extractSpectraPixel(int x, int y) {
-        def pp = new HDF5Pixel(x,y, dimensions)
-        extractSpectra(pp)
-        return pp
+        int x_tile = x / tile_width;
+        int y_tile = y / tile_height;
+        def path =  [ "t" + x_tile + "_" + y_tile ]
+        return extractSpectra(new HDF5Pixel(x,y,dimensions), path)
     }
 
     HDF5Geometry extractSpectraRectangle(int x, int y, int wid, int hei){
@@ -64,9 +66,22 @@ class HDF5PxlReader {
         return extractSpectraRectangle(x,y,size,size)
     }
 
-    HDF5Geometry extractSpectra(HDF5Geometry pxl) {
-        pxl.extractValues(this)
-        return  pxl
+    //Patharray is the array of path overlaping by the figure
+    HDF5Geometry extractSpectra(HDF5Geometry figure, def pathArray) {
+        def tileConcerned = []
+        pathArray.each { path ->
+            if(cache.containsKey(path)){
+                tileConcerned << cache.get(path)
+            }
+            else{
+                def entry = new HDF5TileCache(dimensions, path)
+                entry.extractValues(this)
+                cache.put(path, entry)
+                tileConcerned << entry
+            }
+        }
+        figure.getDataFromCache(tileConcerned)
+        return figure
     }
 
     IHDF5Reader getReader(int i){

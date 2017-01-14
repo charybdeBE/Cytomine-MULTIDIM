@@ -10,14 +10,10 @@ if [ $# -lt 1 ]; then
 fi
 
 dir="${1}/"
+out=""
 
-for fil in $(ls -1v ${dir}*${ext}) ; do
+ls -1v ${dir}*${ext} | while read fil; do
 	fff=$(echo ${fil/${dir}/""})
-	if [ "${out}" == "" ]; then
-		out=${fff}
-	else
-		out="${out},${fff}"
-	fi
+	echo "${fff}"
 done
 
-echo ${out}
