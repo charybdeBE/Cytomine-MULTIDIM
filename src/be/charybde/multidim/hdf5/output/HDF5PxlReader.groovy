@@ -2,8 +2,7 @@ package be.charybde.multidim.hdf5.output
 
 import ch.systemsx.cisd.hdf5.HDF5Factory
 import ch.systemsx.cisd.hdf5.IHDF5Reader
-
-
+import ncsa.hdf.hdf5lib.exceptions.HDF5SymbolTableException
 
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
@@ -58,8 +57,20 @@ class HDF5PxlReader {
 
     HDF5Geometry extractSpectraRectangle(int x, int y, int wid, int hei){
         def rec = new HDF5Rectangle(x,y,wid,hei, dimensions)
-        extractSpectra(rec)
-        return rec
+        def tiles = []
+        int x_tile = x / tile_width;
+        int y_tile = y / tile_height;
+        def x_tile_end = (x + wid) / tile_width
+        def y_tile_end = (y + wid) / tile_height
+
+        // TODO parall
+        (x_tile..x_tile_end).each { xx ->
+            (y_tile..y_tile_end).each { yy ->
+                tiles << "t" + xx + "_" + yy
+            }
+        }
+
+        return extractSpectra(rec, tiles)
     }
 
     HDF5Geometry extractSpectraSquare(int x, int y, int size){
@@ -67,6 +78,7 @@ class HDF5PxlReader {
     }
 
     //Patharray is the array of path overlaping by the figure
+    //Throws IndexOutOfBoundExceptions if shit happens
     HDF5Geometry extractSpectra(HDF5Geometry figure, def pathArray) {
         def tileConcerned = []
         pathArray.each { path ->
@@ -76,6 +88,8 @@ class HDF5PxlReader {
             else{
                 def entry = new HDF5TileCache(dimensions, path)
                 entry.extractValues(this)
+                if(!entry.isDataPresent())
+                    throw new IndexOutOfBoundsException()
                 cache.put(path, entry)
                 tileConcerned << entry
             }

@@ -41,6 +41,11 @@ public class HDF5Pixel implements  HDF5Geometry {
         return y;
     }
 
+    @Override
+    String getCSV() {
+        getValues().toString()
+    }
+
     def getDim(){
         return [x,y,dim]
     }

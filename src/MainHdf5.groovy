@@ -51,26 +51,35 @@ def randomPair = {
 
 def reader = new HDF5PxlReader(fn2)
 def pxl = []
-def coo = [[0,0],[10,10],[5,5],[500,500],[501,501]]
+def coo = [[500000,0],[0,1],[1,0],[0,500],[0,501]]
+//def coo = []
 def times = []
-/*
-0.upto(5,{
+
+/*0.upto(5,{
     def cord = randomPair.call()
     coo << cord
     times << benchmark{
-        pxl << reader.extractSpectraPixel(cord)
+        pxl << reader.extractSpectraSquare(cord[0], coo[1], 10)
     }
 })*/
-
+def i = 0
 coo.each {cord ->
     times << benchmark{
-        pxl << reader.extractSpectraPixel(cord)
+        try{
+            pxl << reader.extractSpectraPixel(cord)
+            println pxl[i].getCSV()
+            ++i
+        }catch (IndexOutOfBoundsException e){
+            println "Shit happens"
+        }
+
     }
+
 }
 
 reader.close()
 
-def i = 0
+i = 0
 times.each { fly ->
     fly /= 1000
     println "It has taken " + fly + " (s) for number " + i + " " + coo[i % coo.size()] + " Control  size : " + pxl[i].getValues().size()

@@ -25,4 +25,5 @@ trait HDF5Geometry {
 
     def abstract getDataFromCache(def array)
     def abstract getDim()
+    public abstract String getCSV()
 }
