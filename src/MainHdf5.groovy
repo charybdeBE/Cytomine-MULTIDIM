@@ -22,9 +22,8 @@ def benchmark = { closure ->
 
 
 def script = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/listOfFile.sh"
-def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1650"
-def dir = "/media/laurent/APOLLOII/TFE/22-LT2-26-01-2011-01-Bruegel/LAM1650/LAM1650HD/"
-/*
+def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1651b"
+def dir = "/home/laurent/cyto_dev/tmp/"
 
 def stringScript = "" + script + " " + dir
 def retScript = stringScript.execute().text
@@ -36,12 +35,12 @@ println "Number of files : " +files.size()
 def tt = benchmark {
     def worker = new BuildFile(fn2, dir, files)
 
-    worker.createParr(8)
+    worker.createParr(4)
 }
 tt /= 1000
 
 println "Time for // " + tt + "(s)"
-*/
+/*
 
 def randomPair = {
     def x = rand.nextInt(15653)
@@ -55,13 +54,15 @@ def coo = [[500000,0],[0,1],[1,0],[0,500],[0,501]]
 //def coo = []
 def times = []
 
+*/
 /*0.upto(5,{
     def cord = randomPair.call()
     coo << cord
     times << benchmark{
         pxl << reader.extractSpectraSquare(cord[0], coo[1], 10)
     }
-})*/
+})*//*
+
 def i = 0
 coo.each {cord ->
     times << benchmark{
@@ -86,3 +87,4 @@ times.each { fly ->
     ++i
 }
 
+*/

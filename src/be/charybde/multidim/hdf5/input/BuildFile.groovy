@@ -13,9 +13,7 @@ import java.util.concurrent.Future
  * Created by laurent on 18.12.16.
  */
 
-//NOTE for future me : a Build file can work easily in //, one juste need to have several extract data instances with different set of file for exemple
-    // and we can write in HDF5 at several olace at once (not really but theroetically)
-//Note bis : x coordinate represent the heigth and y the width
+
 
 public class BuildFile {
     private String filename; //Without extention
@@ -24,8 +22,8 @@ public class BuildFile {
     private ExtractData ed;
     private IHDF5Writer writer;
     private HDF5IntStorageFeatures ft;
-    def ArrayList<MDShortArray> to_write_array = []
-    def ArrayList<String> to_write_names = []
+    def to_write_array = []
+    def to_write_names = []
 
 
     //This is just to debug
@@ -62,7 +60,7 @@ public class BuildFile {
     }
 
     public BuildFile(String filename, String root, def ex) {
-        this(filename, 256,256, 256, root, ex, 5);
+        this(filename, 256,256, 256, root, ex, 10);
     }
 
 
@@ -142,15 +140,17 @@ public class BuildFile {
         0.upto(to_write_array.size() - 1,{ i ->
                 writer.int16().writeMDArray(to_write_names[i], to_write_array[i], ft)
         })
-        to_write_names = new ArrayList<>()
-        to_write_array = new ArrayList<>()
+        to_write_names = new ArrayList<String>()
+        to_write_array = new ArrayList<MDShortArray>()
+        println "Done"
     }
+
 
 
     public void createParr(int coco){
         def ret  = [0,0,0]
         def cores = coco  - 1
-        def threadPool = Executors.newFixedThreadPool(coco)
+        def threadPool = Executors.newFixedThreadPool(coco * 2)
         def names = new ArrayList<ArrayList<String>>()
         def vals = new ArrayList<ArrayList<MDShortArray>>()
         (1..cores).each {
@@ -185,6 +185,8 @@ public class BuildFile {
                 }
                 to_write_array = vals.flatten();
                 to_write_names = names.flatten();
+                names = new ArrayList<ArrayList<String>>()
+                vals = new ArrayList<ArrayList<MDShortArray>>()
                 (0..cores - 1).each {
                     names[it] =  new ArrayList<String>()
                     vals[it] =  new ArrayList<MDShortArray>()
@@ -206,7 +208,7 @@ public class BuildFile {
                     to_write_array = vals.flatten();
                     to_write_names = names.flatten();
                     writeIntoDisk()
-                    (0..cores - 1).each {
+                    (0..cores -1).each {
                         names[it] =  new ArrayList<String>()
                         vals[it] =  new ArrayList<MDShortArray>()
                     }
@@ -235,7 +237,8 @@ public class BuildFile {
         int time = benchmark {
             for (int d = startDim; d < limit; d++) {
                // println "d "+d+ " sD " + startDim + " limit " + limit
-                ed.getImage(d)
+                def get = benchmark { ed.getImage(d) }
+                //println "Time to get image " + d + ": "  + get
                 (0..cores - 1).each { k ->
 
                     arrRet << tp.submit({ -> work(x, y, d,k, names[k], vals[k]) } as Callable)
