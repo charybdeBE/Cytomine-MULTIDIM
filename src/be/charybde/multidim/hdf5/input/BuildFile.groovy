@@ -214,6 +214,8 @@ public class BuildFile {
         def cubeY = startY_cube
         int xx, yy
         for (def i = 0; i < memory; ++i) {
+            if(cubeX > max_cube_x)
+                break
             xx = cubeX * tile_width
             yy = cubeY * tile_height
 
@@ -235,8 +237,7 @@ public class BuildFile {
                 cubeY = cubeY - (max_cube_y +1)
                 cubeX++
             }
-            if(cubeX > max_cube_x)
-                break
+
         }
         return [cubeX, cubeY]
     }
