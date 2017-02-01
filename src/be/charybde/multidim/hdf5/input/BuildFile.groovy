@@ -24,6 +24,7 @@ public class BuildFile {
     private HDF5IntStorageFeatures ft;
     def to_write_array = []
     def to_write_names = []
+    private int max_cube_x, max_cube_y
 
 
     //This is just to debug
@@ -36,14 +37,13 @@ public class BuildFile {
     }
 
 
-
     public BuildFile(String filename, int tile_width, int tile_height, int tile_depth, String root, def ex, def brustSize) {
         this.filename = filename;
         this.tile_width = tile_width;
         this.tile_height = tile_height;
         def dimension = ex.size()
         def fn
-        if(dimension < tile_depth){
+        if(dimension <= tile_depth){
             this.tile_depth = dimension
             fn = filename + extention
         }
@@ -55,83 +55,18 @@ public class BuildFile {
 
         this.ed = new ExtractDataImageIO(root, ex);
 
+        println " " + ed.getImageWidth()  + " "+ ed.getImageHeight()
+        max_cube_x = ed.getImageWidth() / this.tile_width
+        max_cube_y = ed.getImageHeight() / this. tile_height
+        println "M " + max_cube_x + "  " + max_cube_y
         this.writer = HDF5Factory.open(fn);
         this.ft = HDF5IntStorageFeatures.createDeflationUnsigned(HDF5IntStorageFeatures.MAX_DEFLATION_LEVEL);
     }
 
     public BuildFile(String filename, String root, def ex) {
-        this(filename, 256,256, 256, root, ex, 10);
+        this(filename, 256,256, 256, root, ex, 5);
     }
 
-
-    public void createFile(){
-        String meta_group = "/meta";
-        int[] meta_info = [tile_width, tile_height, tile_depth];
-        writer.int32().writeArray(meta_group, meta_info, ft);
-
-        def ret  = [0,0,0]
-
-        def i = 0
-        int nrB = ((ed.getImageWidth() / tile_width) * (ed.getImageHeight() / tile_height) * (ed.getImageDepth() / tile_depth))  / memory
-        while(ret[0] < ed.getImageWidth() || ret[2] < ed.getImageDepth()){
-            def time = benchmark {ret = extractBurst(ret[0], ret[1], 0 ) }
-            def time2 = benchmark {                writeIntoDisk() }
-            ++i
-            time /= 1000
-            time2 /= 1000
-            println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " + ret[0] + " " + ret[1]  + " " + ret[2] )
-
-        }
-
-        writer.close()
-    }
-
-
-    //Return an array with the next coordinate to do
-    private int[] extractBurst(int startX, int startY, int startD){
-        def xx, yy, x,y,d,dd
-        d = (int) (startD / tile_depth)
-        int limit = startD + tile_depth
-        if(limit > ed.getImageDepth())
-            limit = ed.getImageDepth()
-
-        for ( dd = startD; dd < limit; ++dd) {
-            ed.getImage(dd)
-            x = (int) (startX / tile_width)
-            y = (int) (startY / tile_height)
-            xx = startX
-            yy = startY
-
-            for (def i = 0; i < memory; ++i) {
-                if (dd % tile_depth == 0) {
-                    to_write_names << "/r" + d + "/t" + x + "_" + y + "";
-                    to_write_array << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
-                } else {
-                    to_write_array[i] = ed.extract2DTile(xx, yy, dd, tile_width, tile_height, to_write_array[i])
-                }
-
-
-                yy += tile_height
-                y++
-                if (yy >= ed.getImageHeight()) {
-                    yy = 0
-                    y = 0
-                    x++
-                    if (xx != ed.getImageWidth()){
-                        xx += tile_width
-                        if(xx > ed.getImageWidth())
-                            xx = ed.getImageWidth()
-                    }
-                    else
-                        break
-                }
-
-            }
-        }
-
-        return [xx, yy, dd]
-
-    }
 
 
     private void writeIntoDisk(){
@@ -148,7 +83,6 @@ public class BuildFile {
 
 
     public void createParr(int coco){
-        def ret  = [0,0,0]
         def cores = coco  - 1
         def threadPool = Executors.newFixedThreadPool(coco * 2)
         def names = new ArrayList<ArrayList<String>>()
@@ -159,7 +93,10 @@ public class BuildFile {
         }
 
 
-        int nrB = ((ed.getImageWidth() / tile_width) * (ed.getImageHeight() / tile_height) )  / memory
+        int nrB = (int) ((max_cube_y +1) * (max_cube_x + 1) / (memory * cores))
+        if(((max_cube_y +1) * (max_cube_x + 1) % (memory * cores))) //Mb not
+            nrB++
+
         int nrF = (int) (ed.getImageDepth() / tile_depth)
        if(ed.getImageDepth() % tile_depth != 0)
            nrF++
@@ -175,7 +112,7 @@ public class BuildFile {
             x = 0
             y = 0
             def writeFuture = threadPool.submit( {} as Callable) //initialisation of a future
-            for( i=0; i < nrB; i += cores){
+            for( i=0; i <= nrB; i ++){
                 def arrRet = new ArrayList<Future>()
 
 
@@ -196,27 +133,9 @@ public class BuildFile {
                 def time = res[2] / 1000
                 time2 /= 1000
                 println("("+i+"/"+nrB+") : reading : " + time  + "(s) + writing late : " + time2 + " (s) " )
-
+                println "Limits = "  + res
                 x = res[0]
                 y = res[1]
-            }
-            if(i > nrB){//On est allez trop loin
-                int rest = nrB - (i - cores)
-                def arrRet = new ArrayList<Future>()
-                def res = extractBurstParr(rest, x, y, startDim, names, vals, arrRet, threadPool)
-                def time2 = benchmark {
-                    to_write_array = vals.flatten();
-                    to_write_names = names.flatten();
-                    writeIntoDisk()
-                    (0..cores -1).each {
-                        names[it] =  new ArrayList<String>()
-                        vals[it] =  new ArrayList<MDShortArray>()
-                    }
-                }
-                def time = res[2] / 1000
-                time2 /= 1000
-                println("("+nrB+"/"+nrB+") : reading : " + time  + "(s) + writing : " + time2 + " (s) " )
-
             }
 
             writer.close()
@@ -228,7 +147,7 @@ public class BuildFile {
         threadPool.shutdown()
     }
 
-    public int[] extractBurstParr(int cores, int x, int y, int startDim,  ArrayList<ArrayList<String>> names, ArrayList<ArrayList<MDShortArray>> vals, ArrayList<Future> arrRet, def tp){
+    public int[] extractBurstParr(int cores, int cubeX, int cubeY, int startDim,  ArrayList<ArrayList<String>> names, ArrayList<ArrayList<MDShortArray>> vals, ArrayList<Future> arrRet, def tp){
         int[] nextXy
         def limit = startDim + tile_depth
         if(limit > ed.getImageDepth())
@@ -236,26 +155,27 @@ public class BuildFile {
 
         int time = benchmark {
             for (int d = startDim; d < limit; d++) {
-               // println "d "+d+ " sD " + startDim + " limit " + limit
-                def get = benchmark { ed.getImage(d) }
-                //println "Time to get image " + d + ": "  + get
+                ed.getImage(d)
+
                 (0..cores - 1).each { k ->
 
-                    arrRet << tp.submit({ -> work(x, y, d,k, names[k], vals[k]) } as Callable)
+                    arrRet << tp.submit({ -> work(cubeX, cubeY, d,k, names[k], vals[k]) } as Callable)
 
                 }
                 arrRet.each { it.get() }
                 arrRet = new ArrayList<Future>()
             }
         }
-        nextXy = advance1Dto2D(x, y, memory*tile_height*cores)
+
+        nextXy = advanceCube(cubeX, cubeY, memory * cores)
+        println "Next XY = "  + nextXy
         return [nextXy[0], nextXy[1], time]
     }
 
 
     def work = { int startX, int startY, int startD,int k, ArrayList<String> names, ArrayList<MDShortArray> arrs ->
-        int inc = memory * tile_height * k
-        int[] xy = advance1Dto2D(startX, startY, inc)
+        int inc = memory * k
+        int[] xy = advanceCube(startX, startY, inc)
 
         def ret = extract2DBurst(xy[0],xy[1], startD, k, names, arrs)
         return ret
@@ -276,17 +196,29 @@ public class BuildFile {
         return [x,y]
     }
 
-    public int[] extract2DBurst(int startX, int startY, int startD, int k, ArrayList<String> names, ArrayList<MDShortArray> arrs){
-        int d = (int) (startD / tile_depth)
-        int x = (int) (startX / tile_width)
-        int y = (int) (startY / tile_height)
-        int xx = startX
-        int yy = startY
-      //  println "Kzk " + k + " X " + startX + " Y " + startY
+    public int[] advanceCube(int x, int y, int inc){
+        def retY = y + inc
+        def retX = x
+        while(retY > max_cube_y ){
+            retY = retY - (max_cube_y + 1)
+            retX++
+        }
+        return [retX, retY]
+    }
 
+    public int[] extract2DBurst(int startX_cube , int startY_cube, int startD, int k, ArrayList<String> names, ArrayList<MDShortArray> arrs){
+        int d = (int) (startD / tile_depth)
+
+
+        def cubeX = startX_cube
+        def cubeY = startY_cube
+        int xx, yy
         for (def i = 0; i < memory; ++i) {
+            xx = cubeX * tile_width
+            yy = cubeY * tile_height
+
             if (startD % tile_depth == 0) {
-                names << "/r" + d + "/t" + x + "_" + y + "";
+                names << "/r" + d + "/t" + cubeX + "_" + cubeY + "";
                 /*if(already.containsKey(names[i]))
                     println names[i] + " in " + already.get(names[i]) + " and " + k
                 else
@@ -298,21 +230,15 @@ public class BuildFile {
             }
 
 
-            yy += tile_height
-            y++
-            if (yy >= ed.getImageHeight()) {
-                yy = 0
-                y = 0
-                x++
-                if (xx != ed.getImageWidth()) {
-                    xx += tile_width
-                    if (xx > ed.getImageWidth())
-                        xx = ed.getImageWidth()
-                } else
-                    break
+            cubeY++
+            if(cubeY > max_cube_y){
+                cubeY = cubeY - (max_cube_y +1)
+                cubeX++
             }
+            if(cubeX > max_cube_x)
+                break
         }
-        return [xx, yy]
+        return [cubeX, cubeY]
     }
 
 }

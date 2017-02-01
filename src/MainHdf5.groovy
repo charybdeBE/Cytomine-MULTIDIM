@@ -22,8 +22,8 @@ def benchmark = { closure ->
 
 
 def script = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/listOfFile.sh"
-def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1651b"
-def dir = "/home/laurent/cyto_dev/tmp/"
+def fn2 = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test333"
+def dir = "/home/laurent/sample/1-6/"
 
 def stringScript = "" + script + " " + dir
 def retScript = stringScript.execute().text
@@ -35,7 +35,7 @@ println "Number of files : " +files.size()
 def tt = benchmark {
     def worker = new BuildFile(fn2, dir, files)
 
-    worker.createParr(4)
+    worker.createParr(8)
 }
 tt /= 1000
 

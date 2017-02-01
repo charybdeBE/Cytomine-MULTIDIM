@@ -12,7 +12,7 @@ import java.util.concurrent.Future
  * Created by laurent on 28.11.16.
  */
 
-def test_nr = "1024_1"
+def test_nr = "1650_1"
 def nr_random = 1000
 def server = "http://localhost:9080/"
 def file = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/test1650"
@@ -36,6 +36,16 @@ def create_random_pixel = {
     [xx, yy]
 }
 
+def create_square = { x, y ->
+    def ret = []
+    0.upto(9, { xx ->
+        0.upto(9, { yy ->
+                ret <<  [x + xx, y+yy]
+        })
+    })
+    return ret
+}
+
 /*def create_square = { storage ->
     def base = create_random_pixel.call()
     0.upto(9, { x ->
@@ -47,6 +57,18 @@ def create_random_pixel = {
 
 
 def work = { x, y ->
+    def txt = server + "multidim/rect.json?fif=" + file + "&x=" + x + "&y=" + y + "&w=10&h=10"
+    // println "Here is from ${txt}"
+    def texte = ""
+    try {
+        texte = new URL(txt).getText()
+    }catch(Exception e){
+        println "Exception in " + txt
+    }
+    texte
+}
+
+def work2 = { x, y ->
     def txt = server + "multidim/pxl.json?fif=" + file + "&x=" + x + "&y=" + y
     // println "Here is from ${txt}"
     def texte = ""
@@ -60,14 +82,20 @@ def work = { x, y ->
 
 
 def error = 0
-def output = new File("result_ims_"+ test_nr +".txt");
+def output = new File("result_ims_pxlrush_"+ test_nr +".txt");
 output.text = "Execution time (ms)\n"
 
 1.upto(nr_random,{ i ->
     def op = ""
+    def tst = create_random_pixel.call()
+    def ttt = create_square.call(tst[0], tst[1])
     def time = benchmark{
-        def tst = create_random_pixel.call()
-        op = work.call(tst[0], tst[1])
+
+        def j = 0
+        ttt.each {
+            op = work2.call(ttt[j][0], ttt[j][1])
+            ++j
+        }
     }
     def trans = new JsonSlurper()
     def list = trans.parseText(op)
@@ -84,3 +112,4 @@ output.text = "Execution time (ms)\n"
 })
 
 output << "Nr of errors : " + error + "(their times is not included)"
+

@@ -60,10 +60,6 @@ public class ExtractDataImageIO extends ExtractData{
             BufferedImage bf = ImageIO.read(new File(filename));
             ras = bf.getData();
 
-            if(i % 32 == 0){
-                println "We are at " + 12.5 * (i/32) + " % "
-            }
-
         } catch (IOException e) {
             println filenames[i] + " not found"
         }
