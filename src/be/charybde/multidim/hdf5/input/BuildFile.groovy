@@ -18,7 +18,7 @@ import java.util.concurrent.Future
 public class BuildFile {
     private String filename; //Without extention
     private final String extention = ".h5"
-    private int tile_width, tile_height, tile_depth, memory;
+    private int cube_width, cube_height, cube_depth, memory;
     private ExtractData ed;
     private IHDF5Writer writer;
     private HDF5IntStorageFeatures ft;
@@ -37,18 +37,18 @@ public class BuildFile {
     }
 
 
-    public BuildFile(String filename, int tile_width, int tile_height, int tile_depth, String root, def ex, def brustSize) {
+    public BuildFile(String filename, int cube_width, int cube_height, int cube_depth, String root, def ex, def brustSize) {
         this.filename = filename;
-        this.tile_width = tile_width;
-        this.tile_height = tile_height;
+        this.cube_width = cube_width;
+        this.cube_height = cube_height;
         def dimension = ex.size()
         def fn
-        if(dimension <= tile_depth){
-            this.tile_depth = dimension
+        if(dimension <= cube_depth){
+            this.cube_depth = dimension
             fn = filename + extention
         }
         else  {
-            this.tile_depth = tile_depth;
+            this.cube_depth = cube_depth;
             fn = filename + ".0" + extention
         }
         this.memory = brustSize //Represent the nr of tile we store into memory before writing
@@ -56,8 +56,8 @@ public class BuildFile {
         this.ed = new ExtractDataImageIO(root, ex);
 
         println " " + ed.getImageWidth()  + " "+ ed.getImageHeight()
-        max_cube_x = ed.getImageWidth() / this.tile_width
-        max_cube_y = ed.getImageHeight() / this. tile_height
+        max_cube_x = ed.getImageWidth() / this.cube_width
+        max_cube_y = ed.getImageHeight() / this. cube_height
         println "M " + max_cube_x + "  " + max_cube_y
         this.writer = HDF5Factory.open(fn);
         this.ft = HDF5IntStorageFeatures.createDeflationUnsigned(HDF5IntStorageFeatures.MAX_DEFLATION_LEVEL);
@@ -97,8 +97,8 @@ public class BuildFile {
         if(((max_cube_y +1) * (max_cube_x + 1) % (memory * cores))) //Mb not
             nrB++
 
-        int nrF = (int) (ed.getImageDepth() / tile_depth)
-       if(ed.getImageDepth() % tile_depth != 0)
+        int nrF = (int) (ed.getImageDepth() / cube_depth)
+       if(ed.getImageDepth() % cube_depth != 0)
            nrF++
 
 
@@ -106,9 +106,9 @@ public class BuildFile {
         for(d = 0; d < nrF; ++d){
             println "File " + d
             String meta_group = "/meta";
-            int[] meta_info = [tile_width, tile_height, tile_depth];
+            int[] meta_info = [cube_width, cube_height, cube_depth];
             writer.int32().writeArray(meta_group, meta_info, ft);
-            def startDim = d * tile_depth
+            def startDim = d * cube_depth
             x = 0
             y = 0
             def writeFuture = threadPool.submit( {} as Callable) //initialisation of a future
@@ -149,7 +149,7 @@ public class BuildFile {
 
     public int[] extractBurstParr(int cores, int cubeX, int cubeY, int startDim,  ArrayList<ArrayList<String>> names, ArrayList<ArrayList<MDShortArray>> vals, ArrayList<Future> arrRet, def tp){
         int[] nextXy
-        def limit = startDim + tile_depth
+        def limit = startDim + cube_depth
         if(limit > ed.getImageDepth())
             limit = ed.getImageDepth()
 
@@ -181,21 +181,6 @@ public class BuildFile {
         return ret
     }
 
-    public int[] advance1Dto2D(int x, int y, int increase){
-        y = (y + increase)
-        while(y > ed.getImageHeight()){
-            int falseHei = ((int) ((ed.getImageHeight() / tile_height))) * tile_height
-            y = y - falseHei
-            if(y < 0)
-                y = 0
-
-            x += tile_width
-            if(x >= ed.getImageWidth())
-                x = ed.getImageWidth() - 1
-        }
-        return [x,y]
-    }
-
     public int[] advanceCube(int x, int y, int inc){
         def retY = y + inc
         def retX = x
@@ -207,7 +192,7 @@ public class BuildFile {
     }
 
     public int[] extract2DBurst(int startX_cube , int startY_cube, int startD, int k, ArrayList<String> names, ArrayList<MDShortArray> arrs){
-        int d = (int) (startD / tile_depth)
+        int d = (int) (startD / cube_depth)
 
 
         def cubeX = startX_cube
@@ -216,19 +201,19 @@ public class BuildFile {
         for (def i = 0; i < memory; ++i) {
             if(cubeX > max_cube_x)
                 break
-            xx = cubeX * tile_width
-            yy = cubeY * tile_height
+            xx = cubeX * cube_width
+            yy = cubeY * cube_height
 
-            if (startD % tile_depth == 0) {
+            if (startD % cube_depth == 0) {
                 names << "/r" + d + "/t" + cubeX + "_" + cubeY + "";
                 /*if(already.containsKey(names[i]))
                     println names[i] + " in " + already.get(names[i]) + " and " + k
                 else
                     already.put(names[i], k)
                 */
-                arrs << ed.extract2DTile(xx, yy, tile_width, tile_height, tile_depth)
+                arrs << ed.extract2DCube(xx, yy, cube_width, cube_height, cube_depth)
             } else {
-                arrs[i] = ed.extract2DTile(xx, yy, startD % tile_depth, tile_width, tile_height, arrs[i])
+                arrs[i] = ed.extract2DCube(xx, yy, startD % cube_depth, cube_width, cube_height, arrs[i])
             }
 
 

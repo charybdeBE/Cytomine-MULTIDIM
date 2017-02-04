@@ -67,13 +67,13 @@ public class ExtractDataImageIO extends ExtractData{
     }
 
 
-    public MDShortArray extract2DTile(int startX, int startY, int wid, int hei, int depth){
+    public MDShortArray extract2DCube(int startX, int startY, int wid, int hei, int depth){
         long[] dims = [wid, hei, depth];
         MDShortArray result = new MDShortArray(dims);
-        return extract2DTile(startX, startY, 0, wid, hei, result)
+        return extract2DCube(startX, startY, 0, wid, hei, result)
     }
 
-    public MDShortArray extract2DTile(int startX, int startY, int dim, int wid, int hei, MDShortArray base){
+    public MDShortArray extract2DCube(int startX, int startY, int dim, int wid, int hei, MDShortArray base){
      //   println "Sx "  + startX + " Sy " + startY + " d " + dim  +" w " + wid + " hei " +hei
         if(startX + wid >= getImageWidth()){
             wid = getImageWidth() - startX

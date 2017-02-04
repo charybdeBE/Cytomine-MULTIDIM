@@ -37,7 +37,7 @@ class HDF5Test{
 
         for (int i = 0; i <= maxX_cube ; i++) {
             for (int j = 0; j <= maxY_cube ; j++) {
-                isCubePresent(i,j)
+                 assert isCubePresent(i,j) == true
             }
         }
 
