@@ -3,10 +3,6 @@
  */
 
 import be.charybde.multidim.hdf5.input.*
-import be.charybde.multidim.hdf5.output.HDF5Geometry
-import be.charybde.multidim.hdf5.output.HDF5Pixel
-import be.charybde.multidim.hdf5.output.HDF5PxlReader
-import ch.systemsx.cisd.hdf5.HDF5Factory;
 
 def rand = new Random()
 

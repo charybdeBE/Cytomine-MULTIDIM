@@ -1,10 +1,4 @@
 package be.charybde.multidim.hdf5.output
-
-import ch.systemsx.cisd.base.mdarray.MDShortArray
-
-import java.util.concurrent.Callable
-import java.util.concurrent.Future
-
 /**
  * Created by laurent on 08.01.17.
  */
@@ -25,28 +19,16 @@ class HDF5Rectangle implements HDF5Geometry{
         def data = []
         def xStart, xEnd, yStart, yEnd
         array.each{ cache ->
-            if (cache.getXStart() < x) // xstart = max ( x, cache.getXstart())
-                xStart = x
-            else
-                xStart = cache.getXStart()
-            if(cache.getYStart() < y)
-                yStart = y
-            else
-                yStart = cache.getYStart()
-            if(cache.getXEnd() < x + wid - 1)
-                xEnd = cache.getXEnd()
-            else
-                xEnd = x + wid - 1
-            if(cache.getYEnd() < y + hei - 1)
-                yEnd = cache.getYEnd()
-            else
-                yEnd = y + hei - 1
+            xStart = [x, cache.getXStart()].max()
+            yStart = [y, cache.getYStart()].max()
+            xEnd = [x+wid-1, cache.getXEnd()].min()
+            yEnd = [y+hei-1, cache.getYEnd()].min()
 
-            xStart.upto(xEnd, { i->
-                yStart.upto(yEnd, { j->
+            for(int i = xStart; i < xEnd; ++i){
+                for(int j = yStart; j < yEnd; ++j){
                     data << [ [i,j],  cache.getPixelInCache(i,j)  ]
-                })
-            })
+                }
+            }
 
         }
 
