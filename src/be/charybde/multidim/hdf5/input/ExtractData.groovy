@@ -7,8 +7,9 @@ import ch.systemsx.cisd.base.mdarray.MDShortArray;
  */
 public abstract class ExtractData {
 
-    public abstract MDShortArray extract2DCube(int startX, int startY, int dim, int wid, int hei, MDShortArray base)
-    public abstract MDShortArray extract2DCube(int startX, int startY, int wid, int hei, int depth)
+    public MDShortArray extract2DCube(int startX, int startY, int dim, int wid, int hei, MDShortArray base) {}
+    public MDShortArray extract2DCube(int startX, int startY, int wid, int hei, int depth) {}
+    public MDShortArray extractCube(int startX, int startY, int wid, int hei, int depth) {}
     public abstract int getImageWidth();
     public abstract int getImageHeight();
     public abstract int getImageDepth();
