@@ -11,6 +11,8 @@ import java.util.concurrent.Executors
  */
 class BuildFileHDF5 extends BuildFile{
 
+    def threadpool
+
     public BuildFileHDF5(String filename, String original_filename, int x_start, int y_start, int width, int height, int burst){
         this.filename = filename
         this.memory = burst
@@ -39,8 +41,7 @@ class BuildFileHDF5 extends BuildFile{
     }
 
     public void createFromPartOfImage(int cores, boolean divide_source = true){
-        //TODO //
-        def threadPool = Executors.newFixedThreadPool(cores)
+        this.threadpool = Executors.newFixedThreadPool(cores)
 
         int nrDepthCube = (int) (ed.getImageDepth() / cube_depth)
         if(ed.getImageDepth() % cube_depth != 0)
@@ -57,7 +58,7 @@ class BuildFileHDF5 extends BuildFile{
             writer.int32().writeArray(meta_group, meta_info, ft);
             def dim = d * cube_depth
             x = x_start
-            def writeFuture = threadPool.submit({} as Callable) //initialisation of a future
+            def writeFuture = threadpool.submit({} as Callable) //initialisation of a future
             for (i = 0; i < max_cube_x; i++) {
                 y = y_start
                 for (int j = 0; j < max_cube_y; j++) { //TODO separate into bursts

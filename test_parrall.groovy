@@ -9,7 +9,7 @@ def benchmark = { closure ->
 }
 
 class Pxl{
-    def path="http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF=data/28/brug/" //TODO include it in the constructor
+    def path="http://localhost-iip-base/fcgi-bin/iipsrv.fcgi?FIF=data/28/brug/"
     int tile, x,y, res
     Pxl(t,x,y){
         if(x > 255){
