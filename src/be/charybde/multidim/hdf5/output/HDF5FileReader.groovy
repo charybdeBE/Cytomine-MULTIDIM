@@ -1,10 +1,29 @@
-package be.charybde.multidim.hdf5.output
+/*
+ * Copyright (c) 2009-2017. Authors: see NOTICE file.
+ *
+ * Licensed under the GNU Lesser General Public License, Version 2.1 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.gnu.org/licenses/lgpl-2.1.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package be.cytomine.multidim.hdf5.output
 
 import be.cytomine.multidim.exceptions.CacheTooSmallException
 import ch.systemsx.cisd.hdf5.HDF5Factory
 import ch.systemsx.cisd.hdf5.IHDF5Reader
+import grails.util.Holders
 
 import java.util.concurrent.Executors
+import groovy.util.logging.Log
+
 
 /**
  * Created by laurent on 07.01.17.
@@ -21,10 +40,12 @@ class HDF5FileReader {
     private int dimensions
     private HashMap cache
     private int cache_size //NB this is maybe more efficient that asking cache.size()
+    private long lastUse
 
     public HDF5FileReader(String name) {
+        this.lastUse = System.currentTimeMillis()
         this.name = name
-        def script = "/home/laurent/cyto_dev/Cytomine-MULTIDIM/relatedFiles.sh"
+        def script = Holders.config.cytomine.hdf5.scriptToFindFiles
         def stringScript = "" + script + " " + name
         def retScript = stringScript.execute().text
         readers = []
@@ -170,9 +191,8 @@ class HDF5FileReader {
             def lru = cache.min{ it.getValue().lastUse() }
             cache.remove(lru.getKey())
             cache_size--
-            println "Remove " + lru.getKey() + " from cache ("+cache_size+"/"+CACHE_MAX+")"
-            System.gc()
-
+            log.info "Remove " + lru.getKey() + " from cache ("+cache_size+"/"+CACHE_MAX+")"
+            //System.gc()
         }
     }
 
@@ -181,8 +201,15 @@ class HDF5FileReader {
         CACHE_MAX = cache_size - 2
         if(CACHE_MAX < 0) //TODO implement stuff without caching ?
             CACHE_MAX = 1
-        println "K"
         replaceLRU()
+    }
+
+    public void hit(){
+        this.lastUse = System.currentTimeMillis()
+    }
+
+    public long lastUse(){
+        return this.lastUse
     }
 }
 
