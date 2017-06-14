@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package be.cytomine.multidim.hdf5.output
+package be.charybde.multidim.hdf5.output
 
-import be.cytomine.multidim.exceptions.CacheTooSmallException
 import ch.systemsx.cisd.hdf5.HDF5Factory
 import ch.systemsx.cisd.hdf5.IHDF5Reader
-import grails.util.Holders
 
 import java.util.concurrent.Executors
 import groovy.util.logging.Log
@@ -104,8 +102,8 @@ class HDF5FileReader {
     //Throws IndexOutOfBoundExceptions if bad coordinates, and
     //Warning if multiple tile requested and cache full :s
     HDF5Geometry extractSpectra(HDF5Geometry figure, def pathArray) {
-        if(pathArray.size() > CACHE_MAX)
-            throw new CacheTooSmallException()
+/*        if(pathArray.size() > CACHE_MAX)
+            throw new CacheTooSmallException()*/
 
         def tileConcerned = []
         pathArray.each { path ->

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package be.cytomine.multidim.hdf5.output
+package be.charybde.multidim.hdf5.output
 
 /**
  * Created by laurent on 08.01.17.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package be.cytomine.multidim.hdf5.output
+package be.charybde.multidim.hdf5.output
 
 import groovy.util.logging.Log
 import java.util.concurrent.Executors

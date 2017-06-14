@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package be.cytomine.multidim.hdf5.output
+package be.charybde.multidim.hdf5.output
 /**
  * Created by laurent on 16.12.16.
  */

@@ -1,4 +1,4 @@
-package be.charybde.multidim.hdf5.test
+
 
 import be.charybde.multidim.hdf5.input.BuildHyperSpectralFile
 
