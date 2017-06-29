@@ -20,7 +20,6 @@ import ch.systemsx.cisd.hdf5.HDF5Factory
 import ch.systemsx.cisd.hdf5.IHDF5Reader
 
 import java.util.concurrent.Executors
-import groovy.util.logging.Log
 
 
 /**
@@ -189,7 +188,7 @@ class HDF5FileReader {
             def lru = cache.min{ it.getValue().lastUse() }
             cache.remove(lru.getKey())
             cache_size--
-            log.info "Remove " + lru.getKey() + " from cache ("+cache_size+"/"+CACHE_MAX+")"
+            println "Remove " + lru.getKey() + " from cache ("+cache_size+"/"+CACHE_MAX+")"
             //System.gc()
         }
     }
